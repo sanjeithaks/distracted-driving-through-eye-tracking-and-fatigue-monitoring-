@@ -1,0 +1,25 @@
+# Python cache & virtualenvs
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.env
+venv/
+env/
+ENV/
+
+# Pytest & IDE cache
+.pytest_cache/
+.matplotlib_cache/
+.vscode/
+.idea/
+
+# Large generated test videos
+demo_sample_driving.mp4
+demo_output_annotated.mp4
+*.mp4
+*.avi
+
+# Personal files
+Resume*.pdf
+*resume*.pdf

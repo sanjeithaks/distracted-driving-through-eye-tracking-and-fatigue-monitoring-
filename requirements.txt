@@ -1,0 +1,16 @@
+# Computer Vision & Machine Learning
+opencv-python>=4.8.0
+mediapipe>=0.10.0
+numpy>=1.24.0
+scipy>=1.10.0
+
+# Audiovisual & Embedded Hardware Interface
+pygame>=2.5.0
+pyserial>=3.5
+
+# Interactive Web Application & Analytics
+streamlit>=1.30.0
+pandas>=2.0.0
+
+# Testing
+pytest>=7.0.0

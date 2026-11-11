@@ -1,0 +1,165 @@
+"""
+Visual HUD & Overlay Module
+Renders visual feedback exactly matching the figures from the IEEE paper:
+- Fig 4: FACE DETECTED (Green text), Bounding Box, Eye & Lip contours
+- Fig 5: DROWSINESS ALERT! (Bold Red Banner)
+- Fig 6: YAWNING DETECTED! (Bold Magenta/Purple Banner)
+- Fig 7, 8, 9: LOOKING AWAY! (Bold Red/Orange Banner)
+Also renders a real-time telemetry dashboard (EAR, MOR, Head Pose, Counters, FPS).
+"""
+import cv2
+import numpy as np
+
+
+class Visualizer:
+    """
+    Renders high-visibility banners, face bounding boxes, facial landmarks,
+    and driver telemetry HUD.
+    """
+    def __init__(self,
+                 show_landmarks=True,
+                 show_bbox=True,
+                 show_axis=True,
+                 show_hud=True):
+        self.show_landmarks = show_landmarks
+        self.show_bbox = show_bbox
+        self.show_axis = show_axis
+        self.show_hud = show_hud
+
+        # Colors (BGR)
+        self.COLOR_GREEN = (0, 255, 0)
+        self.COLOR_RED = (0, 0, 255)
+        self.COLOR_PURPLE = (255, 0, 180)     # Magenta/Purple for Yawning
+        self.COLOR_YELLOW = (0, 230, 255)     # Yellow for Face Bounding Box
+        self.COLOR_CYAN = (255, 230, 0)       # Cyan for contours
+        self.COLOR_WHITE = (255, 255, 255)
+        self.COLOR_DARK_BG = (20, 20, 20)
+
+    def draw_text_with_outline(self, frame, text, origin, font_scale=1.0, color=(0, 255, 0), thickness=2, outline_thickness=5):
+        """Draw text with high-contrast black outline for crystal clarity."""
+        x, y = origin
+        cv2.putText(frame, text, (x, y), cv2.FONT_HERSHEY_DUPLEX, font_scale, (0, 0, 0), outline_thickness, cv2.LINE_AA)
+        cv2.putText(frame, text, (x, y), cv2.FONT_HERSHEY_DUPLEX, font_scale, color, thickness, cv2.LINE_AA)
+
+    def render(self, frame, detection, ear, mor, is_drowsy, is_yawning, is_distracted,
+               distraction_reason, yaw, pitch, roll, axis_pts, blinks, yawns, distractions,
+               fps, serial_connected):
+        """
+        Render all visual overlays onto the frame.
+        """
+        output = frame.copy()
+        h, w = output.shape[:2]
+
+        # 1. If Face is detected, draw bounding box & landmarks
+        if detection.get('detected', False):
+            bbox = detection['bbox']
+            x, y, bw, bh = bbox
+
+            # Bounding box around face (matching Fig 4)
+            if self.show_bbox:
+                cv2.rectangle(output, (x, y), (x + bw, y + bh), self.COLOR_YELLOW, 2)
+
+            # Draw Eye Contours and Landmarks
+            if self.show_landmarks:
+                # Left eye contour
+                left_contour = np.array(detection['left_eye_contour'], dtype=np.int32)
+                cv2.polylines(output, [left_contour], True, self.COLOR_GREEN, 1, cv2.LINE_AA)
+
+                # Right eye contour
+                right_contour = np.array(detection['right_eye_contour'], dtype=np.int32)
+                cv2.polylines(output, [right_contour], True, self.COLOR_GREEN, 1, cv2.LINE_AA)
+
+                # Lips contour
+                lips_contour = np.array(detection['lips_contour'], dtype=np.int32)
+                cv2.polylines(output, [lips_contour], True, self.COLOR_GREEN, 1, cv2.LINE_AA)
+
+                # Mark key landmark points (small dots)
+                for pt in detection['left_eye_pts'] + detection['right_eye_pts']:
+                    cv2.circle(output, pt, 2, self.COLOR_CYAN, -1, cv2.LINE_AA)
+                for pt in detection['mouth_pts']:
+                    cv2.circle(output, pt, 2, self.COLOR_YELLOW, -1, cv2.LINE_AA)
+
+            # Draw 3D Head Orientation Axis (Nose vector)
+            if self.show_axis and axis_pts[0] is not None and axis_pts[1] is not None:
+                p1, p2 = axis_pts
+                cv2.arrowedLine(output, p1, p2, (0, 165, 255), 2, cv2.LINE_AA, tipLength=0.25)
+
+            # Draw Status Banners matching IEEE Paper Figures:
+            # Banner order priority: Drowsiness > Looking Away > Yawning > Normal
+            banner_y = 50
+
+            if is_drowsy:
+                # Fig 5: DROWSINESS ALERT!
+                self.draw_text_with_outline(output, "DROWSINESS ALERT!", (30, banner_y),
+                                            font_scale=1.1, color=self.COLOR_RED, thickness=3, outline_thickness=6)
+                banner_y += 45
+            elif is_distracted:
+                # Fig 7, 8, 9: LOOKING AWAY!
+                self.draw_text_with_outline(output, "LOOKING AWAY!", (30, banner_y),
+                                            font_scale=1.1, color=self.COLOR_RED, thickness=3, outline_thickness=6)
+                # Show specific reason under banner
+                if distraction_reason != "NORMAL":
+                    self.draw_text_with_outline(output, f"[{distraction_reason}]", (30, banner_y + 35),
+                                                font_scale=0.65, color=(0, 140, 255), thickness=2, outline_thickness=4)
+                banner_y += 45
+            elif is_yawning:
+                # Fig 6: YAWNING DETECTED!
+                self.draw_text_with_outline(output, "YAWNING DETECTED!", (30, banner_y),
+                                            font_scale=1.1, color=self.COLOR_PURPLE, thickness=3, outline_thickness=6)
+                banner_y += 45
+
+            # Green "FACE DETECTED" tag below any alert banner (as seen in Figs 4, 5, 6, 7, 8, 9)
+            self.draw_text_with_outline(output, "FACE DETECTED", (30, banner_y),
+                                        font_scale=0.9, color=self.COLOR_GREEN, thickness=2, outline_thickness=5)
+
+        else:
+            # No face detected
+            self.draw_text_with_outline(output, "NO FACE DETECTED", (30, 50),
+                                        font_scale=1.0, color=(0, 165, 255), thickness=2, outline_thickness=5)
+
+        # 2. Telemetry HUD Bar at Bottom
+        if self.show_hud:
+            self._render_hud_panel(output, ear, mor, yaw, pitch, roll,
+                                   blinks, yawns, distractions, fps, serial_connected)
+
+        return output
+
+    def _render_hud_panel(self, frame, ear, mor, yaw, pitch, roll,
+                          blinks, yawns, distractions, fps, serial_connected):
+        """Render modern semi-transparent HUD dashboard at bottom of frame."""
+        h, w = frame.shape[:2]
+        hud_h = 70
+        y_start = h - hud_h
+
+        # Semi-transparent dark background
+        overlay = frame.copy()
+        cv2.rectangle(overlay, (0, y_start), (w, h), (15, 15, 15), -1)
+        cv2.addWeighted(overlay, 0.75, frame, 0.25, 0, frame)
+
+        # Top border line for HUD
+        cv2.line(frame, (0, y_start), (w, y_start), (70, 70, 70), 1)
+
+        # Row 1: Metrics
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        ear_color = (0, 0, 255) if ear < 0.21 else (0, 255, 0)
+        mor_color = (255, 0, 200) if mor > 0.58 else (0, 255, 0)
+
+        r1_y = y_start + 24
+        cv2.putText(frame, f"EAR: {ear:.2f}", (15, r1_y), font, 0.55, ear_color, 2, cv2.LINE_AA)
+        cv2.putText(frame, f"MOR: {mor:.2f}", (150, r1_y), font, 0.55, mor_color, 2, cv2.LINE_AA)
+        cv2.putText(frame, f"Yaw: {yaw:+.1f} deg", (285, r1_y), font, 0.50, (220, 220, 220), 1, cv2.LINE_AA)
+        cv2.putText(frame, f"Pitch: {pitch:+.1f} deg", (435, r1_y), font, 0.50, (220, 220, 220), 1, cv2.LINE_AA)
+
+        # Row 2: Event Counters and System Telemetry
+        r2_y = y_start + 52
+        cv2.putText(frame, f"Blinks: {blinks}", (15, r2_y), font, 0.50, (255, 255, 255), 1, cv2.LINE_AA)
+        cv2.putText(frame, f"Yawns: {yawns}", (150, r2_y), font, 0.50, (255, 255, 255), 1, cv2.LINE_AA)
+        cv2.putText(frame, f"Distractions: {distractions}", (285, r2_y), font, 0.50, (255, 255, 255), 1, cv2.LINE_AA)
+
+        # FPS & Hardware connection status
+        fps_text = f"FPS: {fps:.1f}"
+        cv2.putText(frame, fps_text, (w - 190, r1_y), font, 0.50, (0, 255, 255), 1, cv2.LINE_AA)
+
+        hw_text = "Embedded: Active" if serial_connected else "Embedded: Off"
+        hw_color = (0, 255, 0) if serial_connected else (130, 130, 130)
+        cv2.putText(frame, hw_text, (w - 190, r2_y), font, 0.50, hw_color, 1, cv2.LINE_AA)
