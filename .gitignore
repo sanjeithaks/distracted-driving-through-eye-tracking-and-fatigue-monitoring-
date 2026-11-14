@@ -20,6 +20,9 @@ demo_output_annotated.mp4
 *.mp4
 *.avi
 
+# Runtime session logs (CSV / JSON / HTML reports from live runs)
+logs/
+
 # Personal files
 Resume*.pdf
 *resume*.pdf

@@ -23,6 +23,7 @@ from .config import (
 from .face_mesh_detector import FaceMeshDetector
 from .facial_features import calculate_ear, calculate_mor, EyeTracker, YawnTracker
 from .head_pose import HeadPoseEstimator
+from .gaze_tracker import GazeTracker
 from .alert_system import AlertSystem
 from .embedded_serial import EmbeddedSerialBridge
 from .visualizer import Visualizer
@@ -61,6 +62,8 @@ class DriverMonitoringEngine:
             pitch_up_thresh=PITCH_UP_THRESHOLD,
             consec_frames=HEAD_POSE_CONSEC_FRAMES
         )
+        # Iris-based eye tracking (gaze direction independent of head pose)
+        self.gaze_tracker = GazeTracker()
 
         # 3. Audio Alert & Embedded Hardware Serial
         self.alert_system = AlertSystem(enabled=enable_audio)
@@ -106,12 +109,24 @@ class DriverMonitoringEngine:
         is_yawning = False
         is_distracted = False
         distraction_reason = "NORMAL"
+        gaze_label = "N/A"
+        gaze_x, gaze_y = 0.5, 0.5
+        is_gaze_distracted = False
 
         if detection['detected']:
             # 1. EAR (Eye Aspect Ratio)
             left_ear = calculate_ear(detection['left_eye_pts'])
             right_ear = calculate_ear(detection['right_eye_pts'])
             is_drowsy, is_blinking, ear = self.eye_tracker.update(left_ear, right_ear)
+
+            # 1b. Iris / gaze tracking (only meaningful while eyes are open)
+            gaze_label, gaze_x, gaze_y, is_gaze_distracted, _ = self.gaze_tracker.update(
+                detection['right_eye_pts'],
+                detection['left_eye_pts'],
+                detection.get('right_iris_center'),
+                detection.get('left_iris_center'),
+                eyes_open=(ear >= self.eye_tracker.ear_thresh)
+            )
 
             # 2. MOR (Mouth Opening Ratio)
             mor_val = calculate_mor(detection['mouth_pts'])
@@ -124,6 +139,12 @@ class DriverMonitoringEngine:
             if valid_pose:
                 is_distracted, distraction_reason, _ = self.head_pose.update(yaw, pitch, roll)
                 axis_pts = self.head_pose.get_projected_axis(rvec, tvec, frame_bgr.shape)
+
+                # Gaze distraction is used when the head itself is still, e.g.
+                # the driver turns only their eyes away from the road.
+                if not is_distracted and is_gaze_distracted:
+                    is_distracted = True
+                    distraction_reason = f"EYES OFF ROAD / GAZE {gaze_label}"
 
             # 4. Sound & Hardware Alert Dispatching
             # Priority: Drowsy > Distracted > Yawning > Normal
@@ -146,7 +167,12 @@ class DriverMonitoringEngine:
             self.yawn_tracker.is_yawning = False
             self.head_pose.distracted_frame_counter = 0
             self.head_pose.is_distracted = False
+            self.gaze_tracker.off_road_counter = 0
+            self.gaze_tracker.is_gaze_distracted = False
             self.serial_bridge.send_state('N')
+
+        total_distractions = (self.head_pose.total_distractions +
+                              self.gaze_tracker.total_gaze_distractions)
 
         # 5. Render HUD & Overlays
         annotated_frame = self.visualizer.render(
@@ -164,9 +190,14 @@ class DriverMonitoringEngine:
             axis_pts=axis_pts,
             blinks=self.eye_tracker.total_blinks,
             yawns=self.yawn_tracker.total_yawns,
-            distractions=self.head_pose.total_distractions,
+            distractions=total_distractions,
             fps=self.fps,
-            serial_connected=self.serial_bridge.is_connected
+            serial_connected=self.serial_bridge.is_connected,
+            gaze_label=gaze_label,
+            gaze_x=gaze_x,
+            gaze_y=gaze_y,
+            ear_thresh=self.eye_tracker.ear_thresh,
+            mor_thresh=self.yawn_tracker.mor_thresh
         )
 
         telemetry = {
@@ -180,9 +211,14 @@ class DriverMonitoringEngine:
             'is_yawning': is_yawning,
             'is_distracted': is_distracted,
             'distraction_reason': distraction_reason,
+            'gaze_label': gaze_label,
+            'gaze_x': gaze_x,
+            'gaze_y': gaze_y,
+            'is_gaze_distracted': is_gaze_distracted,
             'blinks': self.eye_tracker.total_blinks,
             'yawns': self.yawn_tracker.total_yawns,
-            'distractions': self.head_pose.total_distractions,
+            'distractions': total_distractions,
+            'gaze_distractions': self.gaze_tracker.total_gaze_distractions,
             'fps': self.fps,
             'embedded_connected': self.serial_bridge.is_connected
         }

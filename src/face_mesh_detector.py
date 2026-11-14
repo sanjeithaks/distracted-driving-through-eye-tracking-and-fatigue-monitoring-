@@ -68,6 +68,12 @@ class FaceMeshDetector:
         self.LEFT_EYE_CONTOUR = [362, 382, 381, 380, 374, 373, 390, 249, 263, 466, 388, 387, 386, 385, 384, 398]
         self.LIPS_CONTOUR = [61, 146, 91, 181, 84, 17, 314, 405, 321, 375, 291, 308, 324, 318, 402, 317, 14, 87, 178, 88, 95, 78]
 
+        # Iris landmarks (MediaPipe FaceLandmarker returns 478 points when iris is available).
+        # 468 = right iris center, 473 = left iris center (image coordinates).
+        # The 4 surrounding points are used to draw the iris ring.
+        self.RIGHT_IRIS_INDICES = [468, 469, 470, 471, 472]
+        self.LEFT_IRIS_INDICES = [473, 474, 475, 476, 477]
+
     def process(self, frame_bgr):
         """
         Process a BGR video frame.
@@ -112,6 +118,13 @@ class FaceMeshDetector:
         right_eye_contour = [pts_2d[i] for i in self.RIGHT_EYE_CONTOUR]
         lips_contour = [pts_2d[i] for i in self.LIPS_CONTOUR]
 
+        # Iris centers (available when the 478-point mesh is produced)
+        right_iris = None
+        left_iris = None
+        if len(pts_2d) >= 478:
+            right_iris = pts_2d[self.RIGHT_IRIS_INDICES[0]]
+            left_iris = pts_2d[self.LEFT_IRIS_INDICES[0]]
+
         return {
             'detected': True,
             'bbox': bbox,
@@ -122,5 +135,7 @@ class FaceMeshDetector:
             'left_eye_contour': left_eye_contour,
             'right_eye_contour': right_eye_contour,
             'lips_contour': lips_contour,
+            'right_iris_center': right_iris,
+            'left_iris_center': left_iris,
             'all_landmarks_2d': pts_2d
         }

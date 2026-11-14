@@ -22,6 +22,8 @@ import cv2
 os.environ.setdefault("MPLCONFIGDIR", os.path.join(os.path.expanduser("~"), ".matplotlib_cache"))
 
 from src.detector_engine import DriverMonitoringEngine
+from src.session_logger import SessionLogger
+from src.report import generate_html_report
 from src.config import (
     CAMERA_INDEX, FRAME_WIDTH, FRAME_HEIGHT,
     EAR_THRESHOLD, MOR_THRESHOLD, SERIAL_PORT
@@ -77,6 +79,23 @@ def parse_args():
         default=MOR_THRESHOLD,
         help=f"Mouth Opening Ratio threshold (default: {MOR_THRESHOLD})"
     )
+    parser.add_argument(
+        "--log-dir",
+        type=str,
+        default="logs",
+        help="Directory for session CSV / JSON logs (default: logs)"
+    )
+    parser.add_argument(
+        "--no-log",
+        action="store_true",
+        help="Disable session telemetry logging (CSV / JSON / HTML report)"
+    )
+    parser.add_argument(
+        "--report",
+        type=str,
+        default=None,
+        help="Optional path for the generated HTML session report"
+    )
     return parser.parse_args()
 
 
@@ -98,6 +117,7 @@ def main():
     print(f" Audio Warning:    {'OFF' if args.no_audio else 'ON'}")
     print(f" Embedded Serial:  {'OFF' if args.no_serial else f'ON (Port: {args.port})'}")
     print(f" Headless Mode:    {'YES' if args.headless else 'NO'}")
+    print(f" Session Logging:  {'OFF' if args.no_log else f'ON ({args.log_dir})'}")
     print("=" * 70)
 
     # Initialize monitoring engine
@@ -108,6 +128,10 @@ def main():
         enable_audio=not args.no_audio,
         serial_port=args.port
     )
+
+    logger = SessionLogger(output_dir=args.log_dir, enabled=not args.no_log)
+    if logger.enabled:
+        print(f"[INFO] Session log: {logger.csv_path}")
 
     cap = cv2.VideoCapture(source)
     if not cap.isOpened():
@@ -154,6 +178,9 @@ def main():
             if writer:
                 writer.write(annotated_frame)
 
+            # Record telemetry for the session report
+            logger.log_frame(telemetry, frame_count)
+
             # Print telemetry update in terminal every 30 frames
             if frame_count % 30 == 0:
                 status_str = "NORMAL"
@@ -167,9 +194,10 @@ def main():
                 sys.stdout.write(
                     f"\rFrame {frame_count:05d} | EAR: {telemetry['ear']:.2f} | "
                     f"MOR: {telemetry['mor']:.2f} | Yaw: {telemetry['yaw']:+5.1f} | "
-                    f"Pitch: {telemetry['pitch']:+5.1f} | Blinks: {telemetry['blinks']} | "
+                    f"Pitch: {telemetry['pitch']:+5.1f} | Gaze: {telemetry['gaze_label']:<6} | "
+                    f"Blinks: {telemetry['blinks']} | "
                     f"Yawns: {telemetry['yawns']} | Distr: {telemetry['distractions']} | "
-                    f"Status: {status_str:<25}"
+                    f"Status: {status_str:<38}"
                 )
                 sys.stdout.flush()
 
@@ -184,6 +212,7 @@ def main():
                     engine.eye_tracker.reset()
                     engine.yawn_tracker.reset()
                     engine.head_pose.reset()
+                    engine.gaze_tracker.reset()
                     print("\n[INFO] Counters reset.")
 
     except KeyboardInterrupt:
@@ -196,6 +225,32 @@ def main():
         if not args.headless:
             cv2.destroyAllWindows()
         engine.close()
+
+        # Finalize the session log and generate the HTML report
+        summary = logger.close()
+        if logger.enabled:
+            print("\n" + "=" * 70)
+            print(" SESSION SUMMARY")
+            print("=" * 70)
+            print(f" Frames processed:      {summary['frames']}")
+            print(f" Duration:              {summary['duration_sec']} s")
+            print(f" Face detection rate:   {summary['face_detection_rate_pct']} %")
+            print(f" Blinks / Yawns:        {summary['blinks']} / {summary['yawns']}")
+            print(f" Distractions (gaze):   {summary['distractions']} "
+                  f"({summary['gaze_distractions']} gaze alerts)")
+            print(f" Drowsy alert events:   {summary['drowsy_events']}")
+            print(f" Session CSV:           {logger.csv_path}")
+            print(f" Session summary JSON:  {logger.summary_path}")
+
+            report_path = args.report or os.path.join(
+                args.log_dir, f"session_{logger.session_name}_report.html"
+            )
+            try:
+                generate_html_report(summary, report_path)
+                print(f" HTML report:           {report_path}")
+            except Exception as exc:
+                print(f"[WARN] Could not generate HTML report: {exc}")
+            print("=" * 70)
 
 
 if __name__ == "__main__":

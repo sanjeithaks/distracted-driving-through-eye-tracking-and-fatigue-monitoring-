@@ -43,7 +43,8 @@ class Visualizer:
 
     def render(self, frame, detection, ear, mor, is_drowsy, is_yawning, is_distracted,
                distraction_reason, yaw, pitch, roll, axis_pts, blinks, yawns, distractions,
-               fps, serial_connected):
+               fps, serial_connected, gaze_label="N/A", gaze_x=0.5, gaze_y=0.5,
+               ear_thresh=0.21, mor_thresh=0.38):
         """
         Render all visual overlays onto the frame.
         """
@@ -79,6 +80,12 @@ class Visualizer:
                 for pt in detection['mouth_pts']:
                     cv2.circle(output, pt, 2, self.COLOR_YELLOW, -1, cv2.LINE_AA)
 
+                # Iris centres (true eye-tracking cue)
+                for key in ('right_iris_center', 'left_iris_center'):
+                    iris_pt = detection.get(key)
+                    if iris_pt:
+                        cv2.circle(output, iris_pt, 3, (0, 0, 255), -1, cv2.LINE_AA)
+
             # Draw 3D Head Orientation Axis (Nose vector)
             if self.show_axis and axis_pts[0] is not None and axis_pts[1] is not None:
                 p1, p2 = axis_pts
@@ -99,9 +106,11 @@ class Visualizer:
                                             font_scale=1.1, color=self.COLOR_RED, thickness=3, outline_thickness=6)
                 # Show specific reason under banner
                 if distraction_reason != "NORMAL":
-                    self.draw_text_with_outline(output, f"[{distraction_reason}]", (30, banner_y + 35),
+                    self.draw_text_with_outline(output, f"[{distraction_reason}]", (30, banner_y + 32),
                                                 font_scale=0.65, color=(0, 140, 255), thickness=2, outline_thickness=4)
-                banner_y += 45
+                    banner_y += 68
+                else:
+                    banner_y += 45
             elif is_yawning:
                 # Fig 6: YAWNING DETECTED!
                 self.draw_text_with_outline(output, "YAWNING DETECTED!", (30, banner_y),
@@ -120,15 +129,17 @@ class Visualizer:
         # 2. Telemetry HUD Bar at Bottom
         if self.show_hud:
             self._render_hud_panel(output, ear, mor, yaw, pitch, roll,
-                                   blinks, yawns, distractions, fps, serial_connected)
+                                   blinks, yawns, distractions, fps, serial_connected,
+                                   gaze_label, ear_thresh, mor_thresh)
 
         return output
 
     def _render_hud_panel(self, frame, ear, mor, yaw, pitch, roll,
-                          blinks, yawns, distractions, fps, serial_connected):
+                          blinks, yawns, distractions, fps, serial_connected,
+                          gaze_label="N/A", ear_thresh=0.21, mor_thresh=0.38):
         """Render modern semi-transparent HUD dashboard at bottom of frame."""
         h, w = frame.shape[:2]
-        hud_h = 70
+        hud_h = 74
         y_start = h - hud_h
 
         # Semi-transparent dark background
@@ -141,25 +152,31 @@ class Visualizer:
 
         # Row 1: Metrics
         font = cv2.FONT_HERSHEY_SIMPLEX
-        ear_color = (0, 0, 255) if ear < 0.21 else (0, 255, 0)
-        mor_color = (255, 0, 200) if mor > 0.58 else (0, 255, 0)
+        ear_color = (0, 0, 255) if ear < ear_thresh else (0, 255, 0)
+        mor_color = (255, 0, 200) if mor > mor_thresh else (0, 255, 0)
+        gaze_color = {
+            "CENTER": (0, 255, 0),
+            "CLOSED": (130, 130, 130),
+            "N/A": (130, 130, 130),
+        }.get(gaze_label, (0, 165, 255))
 
-        r1_y = y_start + 24
+        r1_y = y_start + 25
         cv2.putText(frame, f"EAR: {ear:.2f}", (15, r1_y), font, 0.55, ear_color, 2, cv2.LINE_AA)
-        cv2.putText(frame, f"MOR: {mor:.2f}", (150, r1_y), font, 0.55, mor_color, 2, cv2.LINE_AA)
-        cv2.putText(frame, f"Yaw: {yaw:+.1f} deg", (285, r1_y), font, 0.50, (220, 220, 220), 1, cv2.LINE_AA)
-        cv2.putText(frame, f"Pitch: {pitch:+.1f} deg", (435, r1_y), font, 0.50, (220, 220, 220), 1, cv2.LINE_AA)
+        cv2.putText(frame, f"MOR: {mor:.2f}", (135, r1_y), font, 0.55, mor_color, 2, cv2.LINE_AA)
+        cv2.putText(frame, f"Yaw: {yaw:+.1f}", (260, r1_y), font, 0.50, (220, 220, 220), 1, cv2.LINE_AA)
+        cv2.putText(frame, f"Pitch: {pitch:+.1f}", (385, r1_y), font, 0.50, (220, 220, 220), 1, cv2.LINE_AA)
+        cv2.putText(frame, f"Gaze: {gaze_label}", (525, r1_y), font, 0.50, gaze_color, 2, cv2.LINE_AA)
 
         # Row 2: Event Counters and System Telemetry
-        r2_y = y_start + 52
+        r2_y = y_start + 54
         cv2.putText(frame, f"Blinks: {blinks}", (15, r2_y), font, 0.50, (255, 255, 255), 1, cv2.LINE_AA)
-        cv2.putText(frame, f"Yawns: {yawns}", (150, r2_y), font, 0.50, (255, 255, 255), 1, cv2.LINE_AA)
-        cv2.putText(frame, f"Distractions: {distractions}", (285, r2_y), font, 0.50, (255, 255, 255), 1, cv2.LINE_AA)
+        cv2.putText(frame, f"Yawns: {yawns}", (120, r2_y), font, 0.50, (255, 255, 255), 1, cv2.LINE_AA)
+        cv2.putText(frame, f"Distractions: {distractions}", (225, r2_y), font, 0.50, (255, 255, 255), 1, cv2.LINE_AA)
 
         # FPS & Hardware connection status
         fps_text = f"FPS: {fps:.1f}"
-        cv2.putText(frame, fps_text, (w - 190, r1_y), font, 0.50, (0, 255, 255), 1, cv2.LINE_AA)
+        cv2.putText(frame, fps_text, (370, r2_y), font, 0.50, (0, 255, 255), 1, cv2.LINE_AA)
 
         hw_text = "Embedded: Active" if serial_connected else "Embedded: Off"
         hw_color = (0, 255, 0) if serial_connected else (130, 130, 130)
-        cv2.putText(frame, hw_text, (w - 190, r2_y), font, 0.50, hw_color, 1, cv2.LINE_AA)
+        cv2.putText(frame, hw_text, (w - 165, r2_y), font, 0.50, hw_color, 1, cv2.LINE_AA)

@@ -5,7 +5,7 @@
 [![Tests](https://img.shields.io/badge/pytest-11%20passed-brightgreen.svg)](tests/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-An end-to-end computer vision and embedded safety system designed to prevent vehicular accidents caused by driver fatigue and inattention. The project implements facial landmark tracking, **Eye Aspect Ratio (EAR)** for drowsiness detection, **Mouth Opening Ratio (MOR)** for yawning monitoring, **3D Head Pose Estimation (solvePnP)** for driver distraction detection (peeping out window, talking to passengers, texting on mobile phone), and an **embedded hardware actuator** driving a 100–300 Hz seatbelt vibration motor and audio alert.
+An end-to-end computer vision and embedded safety system designed to prevent vehicular accidents caused by driver fatigue and inattention. The project implements facial landmark tracking, **Eye Aspect Ratio (EAR)** for drowsiness detection, **Mouth Opening Ratio (MOR)** for yawning monitoring, **3D Head Pose Estimation (solvePnP)** for driver distraction detection (peeping out window, talking to passengers, texting on mobile phone), **iris-based eye-gaze tracking** for eyes-off-road detection, and an **embedded hardware actuator** driving a 100–300 Hz seatbelt vibration motor and audio alert. Every session is logged to CSV/JSON and can be exported as a standalone HTML report.
 
 > **Research Paper Reference**:
 > *"Detect distracted driving through eye tracking and fatigue monitoring using embedded system"*  
@@ -20,7 +20,9 @@ An end-to-end computer vision and embedded safety system designed to prevent veh
    - [Eye Aspect Ratio (EAR) & Drowsiness](#1-eye-aspect-ratio-ear--drowsiness-detection)
    - [Mouth Opening Ratio (MOR) & Yawning](#2-mouth-opening-ratio-mor--yawning-detection)
    - [Head Pose & Distraction Tracking](#3-3d-head-pose-estimation--distraction-tracking)
-   - [Embedded Actuator & Alarm Subsystem](#4-embedded-system-integration)
+   - [Iris Eye-Gaze Tracking](#4-iris-based-eye-gaze-tracking)
+   - [Embedded Actuator & Alarm Subsystem](#5-embedded-system-integration)
+   - [Session Logging & Reports](#6-session-logging--reports)
 3. [Paper Figures & Visual Verification](#paper-figures--visual-verification)
 4. [Installation & Setup](#installation--setup)
 5. [Usage Modes](#usage-modes)
@@ -40,16 +42,20 @@ flowchart TD
     A[Video Input: Webcam / Camera / Video File] --> B[Frame Preprocessing & Sizing]
     B --> C[Face Detection & Bounding Box]
     C --> D[Facial Landmark Localization - Kazemi-Sullivan / Mesh]
-    D --> E1[Feature Extraction: Left & Right Eye Points]
+    D --> E1[Feature Extraction: Left & Right Eye Points + Iris Centres]
     D --> E2[Feature Extraction: Inner & Outer Lip Points]
     D --> E3[Feature Extraction: 3D Model Keypoints]
     
     E1 --> F1["Eye Aspect Ratio (EAR)<br/>Threshold: 0.21"]
+    E1 --> F4["Iris Gaze Ratios (gx, gy)<br/>Calibrated neutral gaze"]
     E2 --> F2["Mouth Opening Ratio (MOR)<br/>Threshold: 0.38"]
     E3 --> F3["Head Pose solvePnP<br/>Euler Angles: Yaw, Pitch, Roll"]
     
     F1 --> G1{Eyes Closed >= 25 Frames?}
     G1 -- Yes --> H1["DROWSINESS ALERT!<br/>Red Banner + Piercing Alarm"]
+
+    F4 --> G4{Sustained Off-Road Gaze?}
+    G4 -- Yes --> H4["EYES OFF ROAD!<br/>Gaze Alert + Counter"]
     
     F2 --> G2{Mouth Open >= 12 Frames?}
     G2 -- Yes --> H2["YAWNING DETECTED!<br/>Purple Banner + Yawn Counter"]
@@ -60,6 +66,7 @@ flowchart TD
     H1 --> I[Embedded Serial Bridge: COM / USB]
     H2 --> I
     H3 --> I
+    H4 --> I
     
     I --> J1[Seatbelt Vibration Motor: 100-300 Hz PWM]
     I --> J2[Hardware Audio Buzzer]
@@ -95,7 +102,26 @@ Using 2D landmarks (nose tip, chin, eye corners, mouth corners) projected agains
 - **Pitch ($\text{Pitch} < -14^\circ$)**: Detects when the driver tilts down toward their lap / mobile phone (texting while driving - *Figure 9*).
 - Triggers the prominent `LOOKING AWAY!` alert banner.
 
-### 4. Embedded System Integration
+### 4. Iris-Based Eye-Gaze Tracking
+Head pose alone cannot detect a driver who keeps their head straight but moves only
+their eyes away from the road. This module adds true eye tracking using the **478-point
+MediaPipe face mesh**, which includes the iris.
+
+- The iris centre is normalised inside each eye:
+  $$g_x = \frac{x_{\text{iris}} - x_{\text{eye,left}}}{x_{\text{eye,right}} - x_{\text{eye,left}}}, \qquad
+    g_y = \frac{y_{\text{iris}} - y_{\text{eyelid,top}}}{y_{\text{eyelid,bottom}} - y_{\text{eyelid,top}}}$$
+  Both ratios are approximately **0.5** when looking straight ahead.
+- The neutral gaze is calibrated automatically from the first 30 frames and
+  slowly adapted while the driver looks at the road.
+- A sustained deviation (`gx` / `gy` outside the calibrated dead-band for
+  **15 consecutive frames**) raises `LOOKING AWAY!` with the reason
+  `EYES OFF ROAD / GAZE LEFT|RIGHT|UP|DOWN`.
+- Gaze is ignored while the eyes are closed (`EAR < 0.21`) to avoid false alerts
+  during blinks and drowsiness.
+- Tuning parameters live in `src/config.py` (`GAZE_HORIZONTAL_DELTA`,
+  `GAZE_VERTICAL_DELTA`, `GAZE_CONSEC_FRAMES`, `GAZE_CALIBRATION_FRAMES`).
+
+### 5. Embedded System Integration
 As detailed in Section IV of the research paper:
 - Serial bridge communicates with an **Arduino / Raspberry Pi / ESP32** microcontroller.
 - Modulates PWM duty cycle to drive a **seatbelt vibration motor at 100 Hz to 300 Hz**.
@@ -104,6 +130,20 @@ As detailed in Section IV of the research paper:
   - `'L'`: Distraction alert (Pulsed vibration + Blue LED).
   - `'Y'`: Yawn warning (Buzzer chime + Yellow LED).
   - `'N'`: Normal driving (Actuators off + Green LED).
+
+### 6. Session Logging & Reports
+Every run records per-frame telemetry and alert events, which makes the project
+usable for evaluation and for the results tables in the IEEE paper:
+
+- `logs/session_<timestamp>.csv` — per-frame EAR, MOR, yaw, pitch, roll, gaze,
+  counter values and alert state.
+- `logs/session_<timestamp>_summary.json` — aggregated statistics and the list
+  of alert events.
+- `logs/session_<timestamp>_report.html` — standalone dark-themed report with
+  session cards, driver-state distribution bars, gaze distribution and an event table.
+
+Disable logging with `--no-log`, or choose another folder with `--log-dir`.
+The self-contained demo writes its report to `docs/demo_report.html`.
 
 ---
 
@@ -118,6 +158,11 @@ The visual overlays match the IEEE paper:
 | **Figure 6: Yawning Detected** | ![Fig 6](docs/screenshots/fig6_yawning_detected.jpg) | Yawning aperture spike (`MOR: 0.47 > 0.38`). Triggers purple yawn banner and increments yawn counter. |
 | **Figure 7 & 8: Looking Away** | ![Fig 7](docs/screenshots/fig7_looking_away.jpg) | Head turned away from road (`Yaw: -16.9°`). Peeping out window or talking to passenger. |
 | **Figure 9: Phone Distraction** | ![Fig 9](docs/screenshots/fig9_phone_distraction.jpg) | Head pitched down (`Pitch: -24.7°`). Driver looking down into mobile phone / texting while driving. |
+
+| **Figure 10: Iris Gaze Tracking** | ![Fig 10](docs/screenshots/fig10_gaze_tracking.jpg) | Head still, eyes glance off-road (`Gaze: RIGHT`). Iris centres are marked in red and a gaze distraction alert is raised. |
+
+> The complete annotated run is saved as `demo_output_annotated.mp4`, and the
+> generated session report is available at [`docs/demo_report.html`](docs/demo_report.html).
 
 ---
 
@@ -163,20 +208,31 @@ python main.py --ear-thresh 0.22 --mor-thresh 0.40
 
 # Run headless (batch processing without GUI display)
 python main.py --source test_clip.mp4 --save result.mp4 --headless
+
+# Write session logs to a custom folder and a named HTML report
+python main.py --source test_clip.mp4 --log-dir reports --report reports/my_session.html
+
+# Disable session logging
+python main.py --no-log
 ```
 *Keyboard Shortcuts in live window:*
 - `q` or `Esc`: Quit application
-- `r`: Reset event counters (blinks, yawns, distractions)
+- `r`: Reset event counters (blinks, yawns, distractions, gaze)
 
 ### 2. Self-Contained Automated Demo
 Run the end-to-end verification demo without needing a webcam:
 ```bash
 python demo.py
 ```
-This generates a synthetic scenario test video simulating all 5 IEEE paper states, processes every frame, saves `demo_output_annotated.mp4`, and captures verification screenshots in `docs/screenshots/`.
+This generates a synthetic scenario test video simulating all six monitored states
+(normal, drowsiness, yawning, head-turn distraction, phone/looking-down distraction,
+and eye-only gaze distraction), processes every frame, saves
+`demo_output_annotated.mp4`, captures verification screenshots in
+`docs/screenshots/`, and writes `docs/demo_report.html` plus the session CSV/JSON.
 
 ### 3. Interactive Streamlit Web Dashboard
-Launch the web interface with real-time gauges, time-series charts, and threshold controls:
+Launch the web interface with real-time gauges, time-series charts, threshold controls,
+session summary and downloadable CSV / HTML report:
 ```bash
 streamlit run app.py
 ```
@@ -221,9 +277,12 @@ distracted-driving-through-eye-tracking-and-fatigue-monitoring-/
 │   ├── face_mesh_detector.py     # High-precision landmark & bounding box detector
 │   ├── facial_features.py        # EAR, MOR mathematical equations & state trackers
 │   ├── head_pose.py              # 3D Head Pose solvePnP (Yaw, Pitch, Roll) & distraction rules
+│   ├── gaze_tracker.py           # Iris-based eye-gaze tracking & off-road gaze detection
 │   ├── alert_system.py           # Thread-safe audio buzzer synthesizer & alert dispatcher
 │   ├── embedded_serial.py        # Serial interface for Arduino / Raspberry Pi
 │   ├── visualizer.py             # Paper-accurate HUD, banners & telemetry renderer
+│   ├── session_logger.py         # Per-frame CSV logging & session summary JSON
+│   ├── report.py                 # Standalone HTML session report generator
 │   └── detector_engine.py        # Complete integrated pipeline engine
 │
 ├── embedded/
@@ -231,13 +290,18 @@ distracted-driving-through-eye-tracking-and-fatigue-monitoring-/
 │   └── raspberry_pi_controller.py# Raspberry Pi GPIO hardware controller
 │
 ├── docs/
-│   └── screenshots/              # Captured verification frames matching Paper Figs 4-9
+│   ├── screenshots/              # Captured verification frames (Figs 4-10)
+│   ├── demo_report.html          # Generated session report (demo run)
+│   └── session_demo.csv/.json    # Generated session telemetry (demo run)
 │
 ├── tests/
 │   ├── __init__.py
 │   ├── test_metrics.py           # Unit tests for EAR, MOR, Euclidean distances, and state machines
+│   ├── test_gaze.py              # Iris gaze ratio & off-road gaze state machine tests
+│   ├── test_logger.py            # Session logger, summary JSON & HTML report tests
 │   └── test_pipeline.py          # Unit tests for head pose estimation & engine pipeline
 │
+├── logs/                         # Runtime session logs (git-ignored)
 ├── main.py                       # CLI application for real-time webcam & video monitoring
 ├── demo.py                       # Self-contained demo script with automated verification
 ├── app.py                        # Modern Streamlit interactive web dashboard
@@ -265,11 +329,17 @@ tests/test_metrics.py::test_calculate_mor PASSED
 tests/test_metrics.py::test_eye_tracker_drowsiness PASSED
 tests/test_metrics.py::test_eye_tracker_blink_counter PASSED
 tests/test_metrics.py::test_yawn_tracker PASSED
+tests/test_gaze.py::test_compute_gaze_ratios_centered PASSED
+tests/test_gaze.py::test_compute_gaze_ratios_shifted_right PASSED
+tests/test_gaze.py::test_gaze_tracker_calibrates_and_detects_off_road PASSED
+tests/test_gaze.py::test_gaze_tracker_ignores_closed_eyes PASSED
+tests/test_logger.py::test_session_logger_writes_csv_and_summary PASSED
+tests/test_logger.py::test_html_report_generation PASSED
 tests/test_pipeline.py::test_head_pose_estimation_straight PASSED
 tests/test_pipeline.py::test_head_pose_distraction_tracker PASSED
 tests/test_pipeline.py::test_face_mesh_detector_on_synthetic_frame PASSED
 tests/test_pipeline.py::test_driver_monitoring_engine_frame PASSED
-============================= 11 passed in 3.13s ==============================
+============================= 17 passed in 2.01s ==============================
 ```
 
 ---

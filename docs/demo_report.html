@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Driver Monitoring Session Report</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: "Segoe UI", Arial, sans-serif;
+         background:#0b1220; color:#e2e8f0; }
+  header { padding:32px 40px; background:linear-gradient(120deg,#0f172a,#1e3a8a);
+            border-bottom:1px solid #1e293b; }
+  h1 { margin:0 0 6px; font-size:26px; }
+  .sub { color:#93c5fd; font-size:14px; }
+  main { padding:28px 40px 48px; max-width:1200px; margin:0 auto; }
+  h2 { font-size:17px; text-transform:uppercase; letter-spacing:.08em;
+        color:#94a3b8; margin:32px 0 14px; }
+  .cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+            gap:14px; }
+  .card { background:#111c30; border:1px solid #1e293b; border-radius:12px;
+           padding:16px 18px; }
+  .card .value { font-size:24px; font-weight:700; color:#7dd3fc; }
+  .card .label { font-size:13px; margin-top:4px; color:#cbd5e1; }
+  .card .hint { font-size:11px; color:#64748b; }
+  .panel { background:#111c30; border:1px solid #1e293b; border-radius:12px;
+            padding:18px 20px; }
+  .bar-row { display:flex; align-items:center; gap:12px; margin:10px 0; }
+  .bar-label { width:160px; font-size:13px; color:#cbd5e1; }
+  .bar-track { flex:1; height:12px; background:#0b1220; border-radius:999px;
+                overflow:hidden; }
+  .bar-fill { height:100%; border-radius:999px; }
+  .bar-value { width:110px; text-align:right; font-size:12px; color:#94a3b8; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th, td { text-align:left; padding:10px 12px; border-bottom:1px solid #1e293b; }
+  th { color:#94a3b8; font-weight:600; text-transform:uppercase; font-size:11px;
+        letter-spacing:.06em; }
+  .tag { padding:2px 8px; border-radius:999px; font-size:11px; font-weight:700; }
+  .tag.drowsy { background:#450a0a; color:#fca5a5; }
+  .tag.distracted { background:#431407; color:#fdba74; }
+  .tag.yawning { background:#3b0764; color:#e9d5ff; }
+  footer { margin-top:36px; color:#64748b; font-size:12px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🚗 Driver Monitoring Session Report</h1>
+  <div class="sub">Distracted Driving Through Eye Tracking &amp; Fatigue Monitoring Using Embedded System</div>
+  <div class="sub">Session: demo &nbsp;•&nbsp; Generated: 2026-11-14 21:45:57</div>
+</header>
+<main>
+  <h2>Session overview</h2>
+  <div class="cards">
+      <div class="card">
+        <div class="value">540</div>
+        <div class="label">Frames Processed</div>
+        <div class="hint"></div>
+      </div>
+      <div class="card">
+        <div class="value">8.96 s</div>
+        <div class="label">Session Duration</div>
+        <div class="hint"></div>
+      </div>
+      <div class="card">
+        <div class="value">100.0 %</div>
+        <div class="label">Face Detection</div>
+        <div class="hint"></div>
+      </div>
+      <div class="card">
+        <div class="value">1</div>
+        <div class="label">Blinks</div>
+        <div class="hint"></div>
+      </div>
+      <div class="card">
+        <div class="value">2</div>
+        <div class="label">Yawns</div>
+        <div class="hint"></div>
+      </div>
+      <div class="card">
+        <div class="value">4</div>
+        <div class="label">Distractions</div>
+        <div class="hint"></div>
+      </div>
+      <div class="card">
+        <div class="value">2</div>
+        <div class="label">Gaze Alerts</div>
+        <div class="hint"></div>
+      </div>
+      <div class="card">
+        <div class="value">0.3103</div>
+        <div class="label">Average EAR</div>
+        <div class="hint"></div>
+      </div>
+      <div class="card">
+        <div class="value">0.1092</div>
+        <div class="label">Minimum EAR</div>
+        <div class="hint"></div>
+      </div>
+      <div class="card">
+        <div class="value">0.5537</div>
+        <div class="label">Maximum MOR</div>
+        <div class="hint"></div>
+      </div>
+      <div class="card">
+        <div class="value">60.48</div>
+        <div class="label">Average FPS</div>
+        <div class="hint"></div>
+      </div></div>
+
+  <h2>Driver state distribution</h2>
+  <div class="panel">
+      <div class="bar-row">
+        <div class="bar-label">Normal driving</div>
+        <div class="bar-track"><div class="bar-fill" style="width:50.0%;background:#22c55e"></div></div>
+        <div class="bar-value">270 (50%)</div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-label">Drowsiness</div>
+        <div class="bar-track"><div class="bar-fill" style="width:10.2%;background:#ef4444"></div></div>
+        <div class="bar-value">55 (10%)</div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-label">Distraction</div>
+        <div class="bar-track"><div class="bar-fill" style="width:31.3%;background:#f97316"></div></div>
+        <div class="bar-value">169 (31%)</div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-label">Yawning</div>
+        <div class="bar-track"><div class="bar-fill" style="width:8.5%;background:#a855f7"></div></div>
+        <div class="bar-value">46 (9%)</div>
+      </div></div>
+
+  <h2>Iris gaze distribution</h2>
+  <div class="panel">
+      <div class="bar-row">
+        <div class="bar-label">CENTER</div>
+        <div class="bar-track"><div class="bar-fill" style="width:75.6%;background:#22c55e"></div></div>
+        <div class="bar-value">408 (76%)</div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-label">LEFT</div>
+        <div class="bar-track"><div class="bar-fill" style="width:8.0%;background:#f97316"></div></div>
+        <div class="bar-value">43 (8%)</div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-label">RIGHT</div>
+        <div class="bar-track"><div class="bar-fill" style="width:1.1%;background:#f97316"></div></div>
+        <div class="bar-value">6 (1%)</div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-label">CLOSED</div>
+        <div class="bar-track"><div class="bar-fill" style="width:15.4%;background:#64748b"></div></div>
+        <div class="bar-value">83 (15%)</div>
+      </div></div>
+
+  <h2>Alert events</h2>
+  <div class="panel">
+    <table>
+      <thead><tr><th>Time (s)</th><th>Frame</th><th>Type</th><th>Message</th><th>Reason</th></tr></thead>
+      <tbody><tr><td>1.75</td><td>97</td><td><span class='tag drowsy'>DROWSY</span></td><td>Drowsiness detected - prolonged eye closure</td><td>NORMAL</td></tr><tr><td>3.92</td><td>230</td><td><span class='tag yawning'>YAWNING</span></td><td>Yawning detected - driver fatigue warning</td><td>NORMAL</td></tr><tr><td>4.95</td><td>292</td><td><span class='tag distracted'>DISTRACTED</span></td><td>Driver distracted - looking away from the road</td><td>LOOKING RIGHT / WINDOW</td></tr><tr><td>6.09</td><td>362</td><td><span class='tag distracted'>DISTRACTED</span></td><td>Driver distracted - looking away from the road</td><td>LOOKING DOWN / PHONE</td></tr><tr><td>7.37</td><td>440</td><td><span class='tag distracted'>DISTRACTED</span></td><td>Driver distracted - looking away from the road</td><td>EYES OFF ROAD / GAZE RIGHT</td></tr><tr><td>8.28</td><td>498</td><td><span class='tag distracted'>DISTRACTED</span></td><td>Driver distracted - looking away from the road</td><td>EYES OFF ROAD / GAZE LEFT</td></tr></tbody>
+    </table>
+  </div>
+
+  <footer>
+    Generated by the Driver Fatigue &amp; Distraction Monitoring System.
+    Metrics: Eye Aspect Ratio (EAR), Mouth Opening Ratio (MOR), 3D head pose (solvePnP),
+    and iris-based eye-gaze tracking.
+  </footer>
+</main>
+</body>
+</html>

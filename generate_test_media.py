@@ -1,11 +1,12 @@
 """
 Test Video & Dataset Generator
-Generates realistic simulated driver video clips demonstrating all 5 states:
+Generates realistic simulated driver video clips demonstrating all monitored states:
 1. Normal driving (Eyes open, looking ahead)
 2. Prolonged Eye Closure (Drowsiness Alert)
 3. Yawning (Mouth Opening Ratio spike)
 4. Distraction: Looking left / window (Head yaw)
 5. Distraction: Looking down / texting on phone (Head pitch)
+6. Eye-only glance (Iris gaze left / right with the head still)
 
 Used for automated testing, offline evaluation, and visual demonstration.
 """
@@ -25,7 +26,8 @@ def create_driver_frame(
     eye_h=15,
     mouth_h=8,
     turn=0.0,         # Yaw turning: -1.5 to 1.5
-    is_looking_down=False
+    is_looking_down=False,
+    gaze_shift=0.0    # Iris offset inside the eye: -1.0 (left) .. +1.0 (right)
 ):
     """
     Synthesize a realistic driver face frame with adjustable
@@ -104,8 +106,11 @@ def create_driver_frame(
             cv2.ellipse(frame, (right_eye_x, eye_y), (right_eye_w, eye_h), 0, 0, 360, (255, 255, 255), -1)
 
             pupil_r = min(7, eye_h)
-            cv2.circle(frame, (left_eye_x, eye_y), pupil_r, (40, 40, 40), -1)
-            cv2.circle(frame, (right_eye_x, eye_y), pupil_r, (40, 40, 40), -1)
+            # Shift the pupil to simulate the eye (iris) glancing sideways
+            pupil_dx_left = int(gaze_shift * max(0, left_eye_w - pupil_r))
+            pupil_dx_right = int(gaze_shift * max(0, right_eye_w - pupil_r))
+            cv2.circle(frame, (left_eye_x + pupil_dx_left, eye_y), pupil_r, (40, 40, 40), -1)
+            cv2.circle(frame, (right_eye_x + pupil_dx_right, eye_y), pupil_r, (40, 40, 40), -1)
 
             cv2.ellipse(frame, (left_eye_x, eye_y), (left_eye_w, eye_h), 0, 0, 360, (70, 70, 70), 1)
             cv2.ellipse(frame, (right_eye_x, eye_y), (right_eye_w, eye_h), 0, 0, 360, (70, 70, 70), 1)
@@ -143,7 +148,7 @@ def create_driver_frame(
     return frame
 
 
-def generate_scenario_video(output_path="demo_sample_driving.mp4", total_frames=420, fps=30):
+def generate_scenario_video(output_path="demo_sample_driving.mp4", total_frames=540, fps=30):
     """
     Generate synthetic test driving video cycling through all IEEE paper scenarios:
     - 0-70:    Normal Driving (Fig 4)
@@ -152,6 +157,8 @@ def generate_scenario_video(output_path="demo_sample_driving.mp4", total_frames=
     - 211-280: Yawning Detected (Fig 6 - High MOR)
     - 281-350: Distraction - Head turned (Fig 7 & 8 - Window / Passenger)
     - 351-420: Distraction - Head pitched down (Fig 9 - Looking into phone)
+    - 421-480: Eye-only glance right (Fig 10 - iris gaze tracking)
+    - 481-540: Eye-only glance left  (Fig 10 - iris gaze tracking)
     """
     os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
@@ -163,6 +170,7 @@ def generate_scenario_video(output_path="demo_sample_driving.mp4", total_frames=
         eye_h = 15
         mouth_h = 8
         turn = 0.0
+        gaze_shift = 0.0
         is_looking_down = False
 
         # Scenario 1: Normal alert driving (0-70)
@@ -196,14 +204,25 @@ def generate_scenario_video(output_path="demo_sample_driving.mp4", total_frames=
             turn = 1.5  # Full head turn
 
         # Scenario 6: Looking Down / Mobile Phone (351-420)
-        else:
+        elif 351 < i <= 420:
             is_looking_down = True
+
+        # Scenario 7: Head still, eyes glance right (421-480) -> iris gaze alert
+        elif 421 < i <= 480:
+            eye_h = 15
+            gaze_shift = 1.0
+
+        # Scenario 8: Head still, eyes glance left (481-540) -> iris gaze alert
+        elif i > 480:
+            eye_h = 15
+            gaze_shift = -1.0
 
         frame = create_driver_frame(
             eye_h=eye_h,
             mouth_h=mouth_h,
             turn=turn,
-            is_looking_down=is_looking_down
+            is_looking_down=is_looking_down,
+            gaze_shift=gaze_shift
         )
         writer.write(frame)
 
@@ -213,4 +232,4 @@ def generate_scenario_video(output_path="demo_sample_driving.mp4", total_frames=
 
 
 if __name__ == "__main__":
-    generate_scenario_video("demo_sample_driving.mp4", total_frames=420)
+    generate_scenario_video("demo_sample_driving.mp4", total_frames=540)

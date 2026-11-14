@@ -45,6 +45,16 @@ PITCH_UP_THRESHOLD = 20.0     # Head tilted up
 # Consecutive frames for head distraction alert
 HEAD_POSE_CONSEC_FRAMES = 10
 
+# --- Iris / Eye-Gaze Tracking (true eye tracking) ---
+# Normalised iris position is ~0.5 when looking straight ahead.
+# A deviation larger than these deltas is treated as an off-road gaze.
+GAZE_HORIZONTAL_DELTA = 0.09
+GAZE_VERTICAL_DELTA = 0.18
+GAZE_CENTER_BAND = 0.03        # dead-band around the neutral position
+GAZE_CONSEC_FRAMES = 15        # sustained off-road gaze frames before alert
+GAZE_CALIBRATION_FRAMES = 30   # frames used to learn the neutral gaze
+GAZE_SMOOTHING = 0.35          # exponential smoothing factor (0-1)
+
 # --- Embedded System (Arduino / Raspberry Pi) ---
 SERIAL_PORT = "COM3"           # Default port (auto-detect fallback available)
 SERIAL_BAUD_RATE = 9600

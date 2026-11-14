@@ -4,9 +4,12 @@ Distracted Driving and Driver Fatigue Monitoring System Package
 from .detector_engine import DriverMonitoringEngine
 from .facial_features import calculate_ear, calculate_mor, EyeTracker, YawnTracker
 from .head_pose import HeadPoseEstimator
+from .gaze_tracker import GazeTracker, compute_gaze_ratios
 from .alert_system import AlertSystem
 from .embedded_serial import EmbeddedSerialBridge
 from .visualizer import Visualizer
+from .session_logger import SessionLogger
+from .report import generate_html_report
 
 __all__ = [
     'DriverMonitoringEngine',
@@ -15,7 +18,11 @@ __all__ = [
     'EyeTracker',
     'YawnTracker',
     'HeadPoseEstimator',
+    'GazeTracker',
+    'compute_gaze_ratios',
     'AlertSystem',
     'EmbeddedSerialBridge',
-    'Visualizer'
+    'Visualizer',
+    'SessionLogger',
+    'generate_html_report'
 ]
