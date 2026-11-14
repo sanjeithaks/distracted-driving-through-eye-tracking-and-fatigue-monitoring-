@@ -161,6 +161,8 @@ The visual overlays match the IEEE paper:
 
 | **Figure 10: Iris Gaze Tracking** | ![Fig 10](docs/screenshots/fig10_gaze_tracking.jpg) | Head still, eyes glance off-road (`Gaze: RIGHT`). Iris centres are marked in red and a gaze distraction alert is raised. |
 
+![All monitored driver states](docs/screenshots/all_states_contact_sheet.jpg)
+
 > The complete annotated run is saved as `demo_output_annotated.mp4`, and the
 > generated session report is available at [`docs/demo_report.html`](docs/demo_report.html).
 
