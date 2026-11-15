@@ -122,6 +122,17 @@ class Visualizer:
             self.draw_text_with_outline(output, "FACE DETECTED", (30, banner_y),
                                         font_scale=0.9, color=self.COLOR_GREEN, thickness=2, outline_thickness=5)
 
+            # Live-camera framing hint: warn when the face is cut off at the
+            # bottom of the frame (common when a laptop camera is too low).
+            if y + bh > h - 105:
+                self.draw_text_with_outline(output, "CENTER FACE IN FRAME", (w - 300, 30),
+                                            font_scale=0.55, color=(0, 165, 255),
+                                            thickness=2, outline_thickness=4)
+            elif bw < w * 0.12:
+                self.draw_text_with_outline(output, "MOVE CLOSER TO CAMERA", (w - 300, 30),
+                                            font_scale=0.55, color=(0, 165, 255),
+                                            thickness=2, outline_thickness=4)
+
         else:
             # No face detected
             self.draw_text_with_outline(output, "NO FACE DETECTED", (30, 50),

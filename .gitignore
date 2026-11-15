@@ -23,6 +23,9 @@ demo_output_annotated.mp4
 # Runtime session logs (CSV / JSON / HTML reports from live runs)
 logs/
 
+# Local live-webcam captures (personal footage - keep out of git)
+docs/live/
+
 # Personal files
 Resume*.pdf
 *resume*.pdf

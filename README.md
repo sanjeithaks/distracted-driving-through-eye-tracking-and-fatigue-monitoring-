@@ -261,6 +261,9 @@ python main.py --ear-thresh 0.22 --mor-thresh 0.40
 # Run headless (batch processing without GUI display)
 python main.py --source test_clip.mp4 --save result.mp4 --headless
 
+# Capture a timed live webcam session (25 s) and save the annotated video
+python main.py --source 0 --duration 25 --save live_session.mp4
+
 # Write session logs to a custom folder and a named HTML report
 python main.py --source test_clip.mp4 --log-dir reports --report reports/my_session.html
 

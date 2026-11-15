@@ -16,6 +16,7 @@ Usage Examples:
 import argparse
 import sys
 import os
+import time
 import cv2
 
 # Set MPLCONFIGDIR to avoid matplotlib cache warnings
@@ -102,6 +103,12 @@ def parse_args():
         action="store_true",
         help="Do not save evidence images when an alert starts"
     )
+    parser.add_argument(
+        "--duration",
+        type=float,
+        default=0.0,
+        help="Stop after N seconds (0 = run until video ends / user quits)"
+    )
     return parser.parse_args()
 
 
@@ -176,6 +183,7 @@ def main():
         cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
 
     frame_count = 0
+    run_start = time.time()
     try:
         while True:
             ret, frame = cap.read()
@@ -230,6 +238,11 @@ def main():
                     engine.gaze_tracker.reset()
                     engine.fatigue_analyzer.reset()
                     print("\n[INFO] Counters reset.")
+
+            # Optional timed capture (useful for live camera demonstrations)
+            if args.duration > 0 and (time.time() - run_start) >= args.duration:
+                print(f"\n[INFO] Capture duration ({args.duration:.0f} s) reached.")
+                break
 
     except KeyboardInterrupt:
         print("\n[INFO] Interrupted by user.")
