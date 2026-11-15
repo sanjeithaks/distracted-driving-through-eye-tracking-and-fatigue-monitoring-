@@ -2,10 +2,10 @@
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 [![OpenCV](https://img.shields.io/badge/OpenCV-5.0%20%7C%204.8%2B-green.svg)](https://opencv.org/)
-[![Tests](https://img.shields.io/badge/pytest-11%20passed-brightgreen.svg)](tests/)
+[![Tests](https://img.shields.io/badge/pytest-22%20passed-brightgreen.svg)](tests/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-An end-to-end computer vision and embedded safety system designed to prevent vehicular accidents caused by driver fatigue and inattention. The project implements facial landmark tracking, **Eye Aspect Ratio (EAR)** for drowsiness detection, **Mouth Opening Ratio (MOR)** for yawning monitoring, **3D Head Pose Estimation (solvePnP)** for driver distraction detection (peeping out window, talking to passengers, texting on mobile phone), **iris-based eye-gaze tracking** for eyes-off-road detection, and an **embedded hardware actuator** driving a 100–300 Hz seatbelt vibration motor and audio alert. Every session is logged to CSV/JSON and can be exported as a standalone HTML report.
+An end-to-end computer vision and embedded safety system designed to prevent vehicular accidents caused by driver fatigue and inattention. The project implements facial landmark tracking, **Eye Aspect Ratio (EAR)** for drowsiness detection, **Mouth Opening Ratio (MOR)** for yawning monitoring, **3D Head Pose Estimation (solvePnP)** for driver distraction detection (peeping out window, talking to passengers, texting on mobile phone), **iris-based eye-gaze tracking** for eyes-off-road detection, **PERCLOS + microsleep detection**, and a research-grade **composite Fatigue Risk Index (FRI)**. The embedded subsystem drives a 100–300 Hz seatbelt vibration motor whose frequency follows the live fatigue score, plus audio/LED alerts. Every session is logged to CSV/JSON with evidence snapshots and exported as a standalone HTML report.
 
 > **Research Paper Reference**:
 > *"Detect distracted driving through eye tracking and fatigue monitoring using embedded system"*  
@@ -21,8 +21,9 @@ An end-to-end computer vision and embedded safety system designed to prevent veh
    - [Mouth Opening Ratio (MOR) & Yawning](#2-mouth-opening-ratio-mor--yawning-detection)
    - [Head Pose & Distraction Tracking](#3-3d-head-pose-estimation--distraction-tracking)
    - [Iris Eye-Gaze Tracking](#4-iris-based-eye-gaze-tracking)
-   - [Embedded Actuator & Alarm Subsystem](#5-embedded-system-integration)
-   - [Session Logging & Reports](#6-session-logging--reports)
+   - [PERCLOS, Microsleeps & Fatigue Risk Index](#5-perclos-microsleeps--fatigue-risk-index)
+   - [Embedded Actuator & Alarm Subsystem](#6-embedded-system-integration)
+   - [Session Logging, Snapshots & Reports](#7-session-logging-snapshots--reports)
 3. [Paper Figures & Visual Verification](#paper-figures--visual-verification)
 4. [Installation & Setup](#installation--setup)
 5. [Usage Modes](#usage-modes)
@@ -32,6 +33,7 @@ An end-to-end computer vision and embedded safety system designed to prevent veh
 6. [Embedded Hardware Connections (Arduino & Raspberry Pi)](#embedded-hardware-connections)
 7. [Repository Structure](#repository-structure)
 8. [Testing & Verification](#testing--verification)
+9. [Research References](#research-references)
 
 ---
 
@@ -62,15 +64,21 @@ flowchart TD
     
     F3 --> G3{Head Turned / Looking Down?}
     G3 -- Yes --> H3["LOOKING AWAY!<br/>Distraction Warning + Counter"]
+
+    F1 --> K["PERCLOS (30 s window)<br/>Microsleep detector<br/>Blink / yawn rates"]
+    K --> L["Fatigue Risk Index (0-100)<br/>PERCLOS 50 + Microsleep 20<br/>Yawn 20 + Closure 10"]
     
     H1 --> I[Embedded Serial Bridge: COM / USB]
     H2 --> I
     H3 --> I
     H4 --> I
+    L --> I
     
-    I --> J1[Seatbelt Vibration Motor: 100-300 Hz PWM]
+    I --> J1["Seatbelt Vibration Motor<br/>100-300 Hz, frequency follows FRI"]
     I --> J2[Hardware Audio Buzzer]
     I --> J3[Vehicle Status Indicator LEDs]
+    L --> M[CSV / JSON logs + evidence snapshots]
+    M --> N[Standalone HTML report with risk timeline]
 ```
 
 ---
@@ -121,17 +129,41 @@ MediaPipe face mesh**, which includes the iris.
 - Tuning parameters live in `src/config.py` (`GAZE_HORIZONTAL_DELTA`,
   `GAZE_VERTICAL_DELTA`, `GAZE_CONSEC_FRAMES`, `GAZE_CALIBRATION_FRAMES`).
 
-### 5. Embedded System Integration
+### 5. PERCLOS, Microsleeps & Fatigue Risk Index
+Drowsiness is not only a single threshold on EAR. This module adds the
+research-validated **PERCLOS** metric plus a composite, explainable risk score.
+
+- **PERCLOS** — percentage of eyelid closure over time (Wierwille et al., 1994;
+  FHWA/NHTSA). Eyelid openness is estimated as `EAR / EAR_open_baseline`, and a
+  frame counts as closed when openness is below 30% (≥70% closed, consistent
+  with the 25–30% eye-opening definitions used in PERCLOS research). PERCLOS is
+  averaged over a rolling **30 s window**.
+- **Microsleeps** — continuous eye closure of **≥ 0.5 s**; the longest closure
+  and number of episodes are recorded.
+- **Blink rate / yawn rate** — per-minute behavioural indicators used by the risk
+  model and report.
+- **Fatigue Risk Index (FRI)** — a weighted 0–100 score:
+  $$FRI = 50\min(1,\tfrac{PERCLOS}{0.40}) + 20\min(1,\tfrac{microsleeps}{5})
+        + 20\min(1,\tfrac{yawns/min}{4}) + 10\min(1,\tfrac{longest\ closure}{3})$$
+  Risk bands: **LOW** (<25), **MODERATE** (25–49), **HIGH** (50–74),
+  **CRITICAL** (≥75). The exact contribution of each factor is shown live in the
+  HUD and in the HTML report, so the alert is explainable rather than a black box.
+
+### 6. Embedded System Integration
 As detailed in Section IV of the research paper:
 - Serial bridge communicates with an **Arduino / Raspberry Pi / ESP32** microcontroller.
 - Modulates PWM duty cycle to drive a **seatbelt vibration motor at 100 Hz to 300 Hz**.
-- Real-time command protocol:
-  - `'D'`: Drowsiness alarm (200 Hz vibration + continuous buzzer + Red LED).
-  - `'L'`: Distraction alert (Pulsed vibration + Blue LED).
-  - `'Y'`: Yawn warning (Buzzer chime + Yellow LED).
-  - `'N'`: Normal driving (Actuators off + Green LED).
+- Real-time command protocol: `"<state>,<fatigue_risk>\n"`, e.g. `"D,82\n"`.
+  - `'D'`: Drowsiness alarm (continuous buzzer + Red LED + vibration).
+  - `'L'`: Distraction alert (pulsed vibration + Blue LED).
+  - `'Y'`: Yawn warning (buzzer chime + Yellow LED).
+  - `'N'`: Normal driving (actuators off + Green LED).
+- The live **Fatigue Risk Index scales the seatbelt vibration frequency**
+  (`100 + 2 × FRI` Hz, i.e. 100–300 Hz) and intensity (45–100% duty), directly
+  implementing the paper's variable-frequency haptic feedback.
+- The firmware also has a 2.5 s heartbeat watchdog that fails safe to normal.
 
-### 6. Session Logging & Reports
+### 7. Session Logging, Snapshots & Reports
 Every run records per-frame telemetry and alert events, which makes the project
 usable for evaluation and for the results tables in the IEEE paper:
 
@@ -157,14 +189,19 @@ The visual overlays match the IEEE paper:
 | **Figure 5: Drowsiness Alert** | ![Fig 5](docs/screenshots/fig5_drowsiness_alert.jpg) | Prolonged eye closure (`EAR: 0.11 < 0.21`). Triggers bold red alert banner + audio alarm + seatbelt vibration. |
 | **Figure 6: Yawning Detected** | ![Fig 6](docs/screenshots/fig6_yawning_detected.jpg) | Yawning aperture spike (`MOR: 0.47 > 0.38`). Triggers purple yawn banner and increments yawn counter. |
 | **Figure 7 & 8: Looking Away** | ![Fig 7](docs/screenshots/fig7_looking_away.jpg) | Head turned away from road (`Yaw: -16.9°`). Peeping out window or talking to passenger. |
-| **Figure 9: Phone Distraction** | ![Fig 9](docs/screenshots/fig9_phone_distraction.jpg) | Head pitched down (`Pitch: -24.7°`). Driver looking down into mobile phone / texting while driving. |
-
-| **Figure 10: Iris Gaze Tracking** | ![Fig 10](docs/screenshots/fig10_gaze_tracking.jpg) | Head still, eyes glance off-road (`Gaze: RIGHT`). Iris centres are marked in red and a gaze distraction alert is raised. |
+| **Figure 9: Phone Distraction** | ![Fig 9](docs/screenshots/fig9_phone_distraction.jpg) | Head pitched down (`Pitch: -24°`). Driver looking down into mobile phone / texting while driving. |
+| **Figure 10: Iris Gaze Tracking** | ![Fig 10](docs/screenshots/fig10_gaze_tracking.jpg) | Head still, eyes glance off-road (`Gaze: RIGHT`). Flanked by the live PERCLOS and Fatigue Risk HUD. |
 
 ![All monitored driver states](docs/screenshots/all_states_contact_sheet.jpg)
 
-> The complete annotated run is saved as `demo_output_annotated.mp4`, and the
-> generated session report is available at [`docs/demo_report.html`](docs/demo_report.html).
+### Final generated session report
+
+![Session report preview](docs/report_preview.png)
+
+> The complete annotated run is saved as `demo_output_annotated.mp4`, the
+> generated report is [`docs/demo_report.html`](docs/demo_report.html), and the
+> raw telemetry is in `docs/session_demo.csv` / `docs/session_demo_summary.json`.
+> Alert evidence frames are stored in [`docs/snapshots/`](docs/snapshots/).
 
 ---
 
@@ -185,7 +222,20 @@ cd distracted-driving-through-eye-tracking-and-fatigue-monitoring-
 pip install -r requirements.txt
 ```
 
-*(Pre-trained neural face landmarker model is included in `models/face_landmarker.task` and will also automatically fetch from Google CDN if not present).*
+*(Pre-trained models are bundled in `models/`: the MediaPipe `face_landmarker.task` and the Apache-2.0 ONNX fallback models. Missing files are downloaded automatically.)*
+
+### Face-landmark backends (automatic)
+The detector selects the best available backend at runtime:
+
+| Backend | Requirement | Notes |
+|---|---|---|
+| **MediaPipe FaceLandmarker** (primary) | `mediapipe` runtime can load | Fastest; 478 points with irises |
+| **OpenCV-DNN ONNX** (automatic fallback) | OpenCV only | 478 points with irises; used when a Windows Application Control policy (e.g. Smart App Control) blocks MediaPipe's unsigned `libmediapipe.dll` |
+
+No extra dependency is needed for the fallback — it runs BlazeFace + Face Landmarker
+ONNX models entirely inside `cv2.dnn`. You can force it with
+`FaceMeshDetector(backend="opencv-dnn")`, or inspect `engine.detector.backend`
+after startup.
 
 ---
 
@@ -276,31 +326,41 @@ distracted-driving-through-eye-tracking-and-fatigue-monitoring-/
 ├── src/
 │   ├── __init__.py
 │   ├── config.py                 # System thresholds, constants & serial settings
-│   ├── face_mesh_detector.py     # High-precision landmark & bounding box detector
+│   ├── face_mesh_detector.py     # Dual backend: MediaPipe + OpenCV-DNN ONNX fallback
 │   ├── facial_features.py        # EAR, MOR mathematical equations & state trackers
 │   ├── head_pose.py              # 3D Head Pose solvePnP (Yaw, Pitch, Roll) & distraction rules
 │   ├── gaze_tracker.py           # Iris-based eye-gaze tracking & off-road gaze detection
+│   ├── fatigue_analyzer.py       # PERCLOS, microsleeps, blink/yawn rates & Fatigue Risk Index
 │   ├── alert_system.py           # Thread-safe audio buzzer synthesizer & alert dispatcher
-│   ├── embedded_serial.py        # Serial interface for Arduino / Raspberry Pi
+│   ├── embedded_serial.py        # Risk-aware serial interface for Arduino / Raspberry Pi
 │   ├── visualizer.py             # Paper-accurate HUD, banners & telemetry renderer
-│   ├── session_logger.py         # Per-frame CSV logging & session summary JSON
-│   ├── report.py                 # Standalone HTML session report generator
+│   ├── session_logger.py         # Per-frame CSV logging, evidence snapshots & summary JSON
+│   ├── report.py                 # Standalone HTML report with fatigue timeline
 │   └── detector_engine.py        # Complete integrated pipeline engine
 │
+├── models/
+│   ├── face_landmarker.task              # MediaPipe primary model
+│   ├── face_detection_short_range.onnx   # OpenCV-DNN fallback detector (Apache-2.0)
+│   ├── face_landmarker_Nx3x256x256.onnx  # OpenCV-DNN fallback 478-point mesh (Apache-2.0)
+│   └── README.md                         # Model sources, licenses & attribution
+│
 ├── embedded/
-│   ├── driver_fatigue_arduino.ino# Arduino microcontroller firmware (100-300 Hz PWM)
+│   ├── driver_fatigue_arduino.ino# Arduino firmware (risk-driven 100-300 Hz PWM)
 │   └── raspberry_pi_controller.py# Raspberry Pi GPIO hardware controller
 │
 ├── docs/
-│   ├── screenshots/              # Captured verification frames (Figs 4-10)
-│   ├── demo_report.html          # Generated session report (demo run)
+│   ├── screenshots/              # Captured verification frames (Figs 4-10) + contact sheet
+│   ├── snapshots/                # Alert evidence frames generated by the demo
+│   ├── demo_report.html          # Generated session report with fatigue timeline
+│   ├── report_preview.png        # Rendered preview of the HTML report
 │   └── session_demo.csv/.json    # Generated session telemetry (demo run)
 │
 ├── tests/
 │   ├── __init__.py
 │   ├── test_metrics.py           # Unit tests for EAR, MOR, Euclidean distances, and state machines
 │   ├── test_gaze.py              # Iris gaze ratio & off-road gaze state machine tests
-│   ├── test_logger.py            # Session logger, summary JSON & HTML report tests
+│   ├── test_fatigue.py           # PERCLOS, microsleep & Fatigue Risk Index tests
+│   ├── test_logger.py            # Session logger, snapshot, summary JSON & report tests
 │   └── test_pipeline.py          # Unit tests for head pose estimation & engine pipeline
 │
 ├── logs/                         # Runtime session logs (git-ignored)
@@ -335,16 +395,36 @@ tests/test_gaze.py::test_compute_gaze_ratios_centered PASSED
 tests/test_gaze.py::test_compute_gaze_ratios_shifted_right PASSED
 tests/test_gaze.py::test_gaze_tracker_calibrates_and_detects_off_road PASSED
 tests/test_gaze.py::test_gaze_tracker_ignores_closed_eyes PASSED
+tests/test_fatigue.py::test_perclos_and_microsleep_detection PASSED
+tests/test_fatigue.py::test_risk_levels PASSED
+tests/test_fatigue.py::test_fatigue_risk_factors_sum_to_index PASSED
+tests/test_fatigue.py::test_no_face_does_not_trigger_false_fatigue PASSED
 tests/test_logger.py::test_session_logger_writes_csv_and_summary PASSED
+tests/test_logger.py::test_alert_evidence_snapshot PASSED
 tests/test_logger.py::test_html_report_generation PASSED
 tests/test_pipeline.py::test_head_pose_estimation_straight PASSED
 tests/test_pipeline.py::test_head_pose_distraction_tracker PASSED
 tests/test_pipeline.py::test_face_mesh_detector_on_synthetic_frame PASSED
 tests/test_pipeline.py::test_driver_monitoring_engine_frame PASSED
-============================= 17 passed in 2.01s ==============================
+============================= 22 passed in 13.60s ==============================
 ```
+
+---
+
+## Research References
+
+1. Wierwille, W. W., et al. *Evaluation of Techniques for Ocular Measurement as an Index of Fatigue and as the Basis for Alertness Management.* NHTSA/FHWA, 1994. — origin of PERCLOS.
+2. *PERCLOS: A Valid Psychophysiological Measure of Alertness as Assessed by Psychomotor Vigilance.* FHWA Tech Brief, 1998. https://rosap.ntl.bts.gov/view/dot/113
+3. *PERCLOS-based technologies for detecting drowsiness: current evidence and future directions.* PMC, 2023. https://pmc.ncbi.nlm.nih.gov/articles/PMC10108649
+4. Soukupová, T., & Čech, J. *Real-Time Eye Blink Detection Using Facial Landmarks.* 2016. — EAR formulation.
+5. Kazemi, V., & Sullivan, J. *One Millisecond Face Alignment with an Ensemble of Regression Trees.* CVPR, 2014.
+6. Google MediaPipe Face Mesh / Face Landmarker — https://github.com/google-ai-edge/mediapipe (Apache-2.0).
+7. Yakhyokhuja Valikhujaev, *mediapipe-face-mesh-onnx* — ONNX model exports used by the OpenCV-DNN fallback (Apache-2.0). https://github.com/yakhyo/mediapipe-face-mesh-onnx
 
 ---
 
 ## License
 This project is open-source and released under the [MIT License](LICENSE).
+
+Third-party model weights in `models/` retain their original Apache-2.0 licenses;
+see [`models/README.md`](models/README.md) for attribution.

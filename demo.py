@@ -45,7 +45,9 @@ def run_demo(input_video="demo_sample_driving.mp4",
         enable_serial=False,
         enable_audio=False
     )
-    logger = SessionLogger(output_dir="docs", session_name="demo")
+    logger = SessionLogger(output_dir="docs", session_name="demo",
+                           snapshot_dir="docs/snapshots")
+    print(f"[DEMO] Face landmark backend: {engine.detector.backend}")
 
     cap = cv2.VideoCapture(input_video)
     if not cap.isOpened():
@@ -80,7 +82,7 @@ def run_demo(input_video="demo_sample_driving.mp4",
         frame_idx += 1
         annotated_frame, telemetry = engine.process_frame(frame)
         writer.write(annotated_frame)
-        logger.log_frame(telemetry, frame_idx)
+        logger.log_frame(telemetry, frame_idx, frame=annotated_frame)
 
         # Snapshot 1: Normal Face Detected (Fig 4)
         if 20 <= frame_idx <= 40 and not captured_shots['fig4'] and telemetry['face_detected']:
@@ -125,7 +127,7 @@ def run_demo(input_video="demo_sample_driving.mp4",
             print(f" -> Captured Figure 10 (Iris Gaze Tracking): {shot_path}")
 
         if frame_idx % 40 == 0:
-            print(f"   Processed frame {frame_idx:03d}/{total_frames or 540} | EAR: {telemetry['ear']:.2f} | MOR: {telemetry['mor']:.2f} | Yaw: {telemetry['yaw']:+5.1f} | Pitch: {telemetry['pitch']:+5.1f} | Gaze: {telemetry['gaze_label']}")
+            print(f"   Processed frame {frame_idx:03d}/{total_frames or 540} | EAR: {telemetry['ear']:.2f} | MOR: {telemetry['mor']:.2f} | Gaze: {telemetry['gaze_label']:<6} | PERCLOS: {telemetry['perclos_pct']:4.1f}% | FRI: {telemetry['fatigue_risk']:3.0f} ({telemetry['risk_level']})")
 
     cap.release()
     writer.release()
@@ -145,7 +147,14 @@ def run_demo(input_video="demo_sample_driving.mp4",
     print(f" Total Distractions:       {summary['distractions']}")
     print(f" Gaze Alerts:              {summary['gaze_distractions']}")
     print(f" Gaze Distribution:        {summary['gaze_direction_counts']}")
+    print(f" Mean / Peak PERCLOS:      {summary['avg_perclos']}% / {summary['max_perclos']}%")
+    print(f" Fatigue Risk Index:       {summary['final_fatigue_risk']}/100 "
+          f"({summary['final_risk_level']}) peak {summary['peak_fatigue_risk']}")
+    print(f" Microsleeps:              {summary['microsleeps']} "
+          f"(longest closure {summary['longest_closure_sec']} s)")
+    print(f" Blink / Yawn rate:        {summary['blink_rate']} / {summary['yawn_rate']} per min")
     print(f" Screenshots Directory:    {screenshots_dir}")
+    print(f" Evidence Snapshots:       docs/snapshots")
     print(f" Session CSV:              {logger.csv_path}")
     print(f" Session Summary JSON:     {logger.summary_path}")
     print(f" HTML Report:              {os.path.normpath(report_path)}")

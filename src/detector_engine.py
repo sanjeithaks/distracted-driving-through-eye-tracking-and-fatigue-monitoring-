@@ -24,6 +24,7 @@ from .face_mesh_detector import FaceMeshDetector
 from .facial_features import calculate_ear, calculate_mor, EyeTracker, YawnTracker
 from .head_pose import HeadPoseEstimator
 from .gaze_tracker import GazeTracker
+from .fatigue_analyzer import FatigueAnalyzer
 from .alert_system import AlertSystem
 from .embedded_serial import EmbeddedSerialBridge
 from .visualizer import Visualizer
@@ -64,6 +65,8 @@ class DriverMonitoringEngine:
         )
         # Iris-based eye tracking (gaze direction independent of head pose)
         self.gaze_tracker = GazeTracker()
+        # PERCLOS / microsleep / composite fatigue risk analytics
+        self.fatigue_analyzer = FatigueAnalyzer()
 
         # 3. Audio Alert & Embedded Hardware Serial
         self.alert_system = AlertSystem(enabled=enable_audio)
@@ -84,6 +87,7 @@ class DriverMonitoringEngine:
         # FPS calculation
         self.prev_time = time.time()
         self.fps = 0.0
+        self.frame_index = 0
 
     def process_frame(self, frame_bgr):
         """
@@ -97,6 +101,7 @@ class DriverMonitoringEngine:
         if dt > 0:
             self.fps = 0.9 * self.fps + 0.1 * (1.0 / dt)
         self.prev_time = now
+        self.frame_index += 1
 
         # Run face & landmark detector
         detection = self.detector.process(frame_bgr)
@@ -145,20 +150,6 @@ class DriverMonitoringEngine:
                 if not is_distracted and is_gaze_distracted:
                     is_distracted = True
                     distraction_reason = f"EYES OFF ROAD / GAZE {gaze_label}"
-
-            # 4. Sound & Hardware Alert Dispatching
-            # Priority: Drowsy > Distracted > Yawning > Normal
-            if is_drowsy:
-                self.alert_system.trigger_drowsy_alarm()
-                self.serial_bridge.send_state('D')
-            elif is_distracted:
-                self.alert_system.trigger_distraction_alert()
-                self.serial_bridge.send_state('L')
-            elif is_yawning:
-                self.alert_system.trigger_yawn_alert()
-                self.serial_bridge.send_state('Y')
-            else:
-                self.serial_bridge.send_state('N')
         else:
             # Face lost - reset short-term counters
             self.eye_tracker.closed_frame_counter = 0
@@ -169,7 +160,31 @@ class DriverMonitoringEngine:
             self.head_pose.is_distracted = False
             self.gaze_tracker.off_road_counter = 0
             self.gaze_tracker.is_gaze_distracted = False
-            self.serial_bridge.send_state('N')
+
+        # 4. Fatigue analytics: PERCLOS, microsleeps & composite risk index
+        fatigue = self.fatigue_analyzer.update(
+            ear=ear,
+            face_detected=detection['detected'],
+            blinks=self.eye_tracker.total_blinks,
+            yawns=self.yawn_tracker.total_yawns
+        )
+
+        # 5. Sound & Hardware Alert Dispatching
+        # Priority: Drowsy > Distracted > Yawning > Normal
+        if detection['detected']:
+            if is_drowsy:
+                self.alert_system.trigger_drowsy_alarm()
+                self.serial_bridge.send_state('D', fatigue['fatigue_risk'])
+            elif is_distracted:
+                self.alert_system.trigger_distraction_alert()
+                self.serial_bridge.send_state('L', fatigue['fatigue_risk'])
+            elif is_yawning:
+                self.alert_system.trigger_yawn_alert()
+                self.serial_bridge.send_state('Y', fatigue['fatigue_risk'])
+            else:
+                self.serial_bridge.send_state('N', fatigue['fatigue_risk'])
+        else:
+            self.serial_bridge.send_state('N', fatigue['fatigue_risk'])
 
         total_distractions = (self.head_pose.total_distractions +
                               self.gaze_tracker.total_gaze_distractions)
@@ -197,7 +212,11 @@ class DriverMonitoringEngine:
             gaze_x=gaze_x,
             gaze_y=gaze_y,
             ear_thresh=self.eye_tracker.ear_thresh,
-            mor_thresh=self.yawn_tracker.mor_thresh
+            mor_thresh=self.yawn_tracker.mor_thresh,
+            perclos=fatigue['perclos_pct'],
+            fatigue_risk=fatigue['fatigue_risk'],
+            risk_level=fatigue['risk_level'],
+            microsleeps=fatigue['microsleeps']
         )
 
         telemetry = {
@@ -219,7 +238,17 @@ class DriverMonitoringEngine:
             'yawns': self.yawn_tracker.total_yawns,
             'distractions': total_distractions,
             'gaze_distractions': self.gaze_tracker.total_gaze_distractions,
+            'perclos': fatigue['perclos'],
+            'perclos_pct': fatigue['perclos_pct'],
+            'fatigue_risk': fatigue['fatigue_risk'],
+            'risk_level': fatigue['risk_level'],
+            'risk_factors': fatigue['risk_factors'],
+            'microsleeps': fatigue['microsleeps'],
+            'longest_closure_sec': fatigue['longest_closure_sec'],
+            'blink_rate': fatigue['blink_rate'],
+            'yawn_rate': fatigue['yawn_rate'],
             'fps': self.fps,
+            'backend': self.detector.backend,
             'embedded_connected': self.serial_bridge.is_connected
         }
 

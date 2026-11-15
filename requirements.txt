@@ -1,5 +1,7 @@
 # Computer Vision & Machine Learning
 opencv-python>=4.8.0
+# Primary face-landmark backend. If the MediaPipe native runtime cannot load,
+# the project automatically falls back to the bundled ONNX models via cv2.dnn.
 mediapipe>=0.10.0
 numpy>=1.24.0
 scipy>=1.10.0

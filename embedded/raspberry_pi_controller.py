@@ -50,16 +50,34 @@ class RaspberryPiHardware:
         else:
             print("[RPI Hardware] RPi.GPIO not detected. Running in mock simulation mode.")
 
-    def set_state(self, state):
+    def set_state(self, state, fatigue_risk=None):
         """
-        Actuate hardware based on state:
-        'D': Drowsy -> Red LED + PWM Vibration + Buzzer
-        'L': Looking Away -> Blue LED + Pulsed Vibration
+        Actuate hardware based on state and optional Fatigue Risk Index (0-100):
+        'D': Drowsy -> Red LED + risk-scaled PWM vibration (100-300 Hz) + Buzzer
+        'L': Looking Away -> Blue LED + pulsed vibration
         'Y': Yawning -> Yellow LED
         'N': Normal -> Green LED, actuators off
         """
         if not RPI_AVAILABLE:
             return
+
+        risk = 0
+        if fatigue_risk is not None:
+            try:
+                risk = max(0, min(100, int(float(fatigue_risk))))
+            except (TypeError, ValueError):
+                risk = 0
+
+        # Risk maps the seatbelt vibration into the paper's 100-300 Hz range
+        target_freq = 100 + risk * 2
+        duty = 45 + (risk * 55) // 100
+
+        if self.pwm_vibration and target_freq != self.vibration_freq:
+            try:
+                self.pwm_vibration.ChangeFrequency(target_freq)
+                self.vibration_freq = target_freq
+            except (AttributeError, RuntimeError):
+                pass
 
         if state == 'D':
             GPIO.output(self.PIN_LED_RED, GPIO.HIGH)
@@ -68,7 +86,7 @@ class RaspberryPiHardware:
             GPIO.output(self.PIN_LED_BLUE, GPIO.LOW)
             GPIO.output(self.PIN_BUZZER, GPIO.HIGH)
             if self.pwm_vibration:
-                self.pwm_vibration.ChangeDutyCycle(80)  # High vibration
+                self.pwm_vibration.ChangeDutyCycle(duty)
 
         elif state == 'L':
             GPIO.output(self.PIN_LED_BLUE, GPIO.HIGH)
@@ -77,7 +95,7 @@ class RaspberryPiHardware:
             GPIO.output(self.PIN_LED_YELLOW, GPIO.LOW)
             GPIO.output(self.PIN_BUZZER, GPIO.LOW)
             if self.pwm_vibration:
-                self.pwm_vibration.ChangeDutyCycle(50)  # Medium vibration
+                self.pwm_vibration.ChangeDutyCycle(max(30, duty - 20))
 
         elif state == 'Y':
             GPIO.output(self.PIN_LED_YELLOW, GPIO.HIGH)

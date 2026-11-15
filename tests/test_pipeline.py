@@ -61,4 +61,8 @@ def test_driver_monitoring_engine_frame():
     assert telemetry['face_detected']
     assert telemetry['ear'] > 0.15
     assert not telemetry['is_drowsy']
+    assert 0.0 <= telemetry['perclos_pct'] <= 100.0
+    assert 0.0 <= telemetry['fatigue_risk'] <= 100.0
+    assert telemetry['risk_level'] in {'LOW', 'MODERATE', 'HIGH', 'CRITICAL'}
+    assert telemetry['microsleeps'] == 0
     engine.close()

@@ -31,6 +31,7 @@ class EmbeddedSerialBridge:
         self.ser = None
         self.is_connected = False
         self.last_sent_state = None
+        self.last_sent_risk = None
         self.last_send_time = 0
         self._lock = threading.Lock()
 
@@ -71,28 +72,46 @@ class EmbeddedSerialBridge:
             self.is_connected = False
             self.ser = None
 
-    def send_state(self, state_char):
+    def send_state(self, state_char, fatigue_risk=None):
         """
-        Send state character to embedded hardware:
-        - 'D' -> Drowsiness (Seatbelt vibration 100-300 Hz + Buzzer)
-        - 'Y' -> Yawn (Fatigue LED pulse)
-        - 'L' -> Looking away / Distracted (Intermittent vibration pulse)
-        - 'N' -> Normal (All alarms off, green status)
+        Send state character (and optional fatigue risk 0-100) to the
+        embedded hardware:
+
+        - 'D' -> Drowsiness (seatbelt vibration + buzzer)
+        - 'Y' -> Yawn (fatigue LED pulse)
+        - 'L' -> Looking away / Distracted (intermittent vibration pulse)
+        - 'N' -> Normal (all alarms off, green status)
+
+        Wire format: ``"<state>,<risk>\\n"`` e.g. ``"D,82\\n"``. Firmware maps the
+        risk score to the seatbelt vibration frequency in the paper's
+        100-300 Hz range. A legacy ``"<state>\\n"`` message is still supported.
         """
         if not self.enabled or not self.is_connected or self.ser is None:
             return
 
+        risk = None
+        if fatigue_risk is not None:
+            try:
+                risk = int(max(0.0, min(100.0, float(fatigue_risk))))
+            except (TypeError, ValueError):
+                risk = None
+
         now = time.time()
         with self._lock:
-            # Avoid flooding the serial line (rate limit to 10 Hz)
-            if state_char == self.last_sent_state and (now - self.last_send_time < 0.25):
+            # Avoid flooding the serial line (rate limit to 10 Hz), but still
+            # send when the risk score changes meaningfully.
+            risk_changed = (risk is not None and self.last_sent_risk is not None
+                            and abs(risk - self.last_sent_risk) >= 3)
+            if (state_char == self.last_sent_state and not risk_changed
+                    and (now - self.last_send_time < 0.25)):
                 return
 
             try:
-                msg = f"{state_char}\n".encode('utf-8')
-                self.ser.write(msg)
+                message = f"{state_char},{risk}\n" if risk is not None else f"{state_char}\n"
+                self.ser.write(message.encode('utf-8'))
                 self.ser.flush()
                 self.last_sent_state = state_char
+                self.last_sent_risk = risk
                 self.last_send_time = now
             except Exception:
                 self.is_connected = False

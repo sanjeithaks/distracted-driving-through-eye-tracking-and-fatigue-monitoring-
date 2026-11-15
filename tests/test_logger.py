@@ -4,6 +4,9 @@ Unit tests for the session logger, summary aggregation and HTML report.
 import json
 import os
 
+import numpy as np
+import pytest
+
 from src.report import generate_html_report
 from src.session_logger import SessionLogger
 
@@ -28,6 +31,15 @@ def _telemetry(**overrides):
         'yawns': 0,
         'distractions': 0,
         'gaze_distractions': 0,
+        'perclos_pct': 5.0,
+        'fatigue_risk': 12.0,
+        'risk_level': 'LOW',
+        'microsleeps': 0,
+        'longest_closure_sec': 0.2,
+        'blink_rate': 15.0,
+        'yawn_rate': 1.0,
+        'risk_factors': {'perclos': 6.0, 'microsleep': 0.0,
+                         'yawning': 5.0, 'closure': 1.0},
         'fps': 30.0,
     }
     base.update(overrides)
@@ -38,7 +50,8 @@ def test_session_logger_writes_csv_and_summary(tmp_path):
     logger = SessionLogger(output_dir=str(tmp_path), session_name="test")
     logger.log_frame(_telemetry(), frame_index=1)
     logger.log_frame(_telemetry(ear=0.10, is_drowsy=True,
-                                distraction_reason='NORMAL'), frame_index=2)
+                                perclos_pct=40.0, fatigue_risk=62.0,
+                                risk_level='HIGH'), frame_index=2)
     logger.log_frame(_telemetry(gaze_label='LEFT', is_distracted=True,
                                 distraction_reason='EYES OFF ROAD / GAZE LEFT',
                                 distractions=1, gaze_distractions=1,
@@ -54,6 +67,8 @@ def test_session_logger_writes_csv_and_summary(tmp_path):
     assert summary['distraction_events'] == 1
     assert summary['min_ear'] == 0.10
     assert summary['gaze_direction_counts']['LEFT'] == 1
+    assert summary['avg_perclos'] == pytest.approx((5 + 40 + 5) / 3, abs=0.01)
+    assert summary['peak_fatigue_risk'] == 62.0
 
     with open(logger.summary_path, encoding="utf-8") as fh:
         stored = json.load(fh)
@@ -62,6 +77,21 @@ def test_session_logger_writes_csv_and_summary(tmp_path):
     with open(logger.csv_path, encoding="utf-8") as fh:
         lines = fh.readlines()
     assert len(lines) == 4  # header + 3 frames
+    assert 'perclos' in lines[0] and 'fatigue_risk' in lines[0]
+
+
+def test_alert_evidence_snapshot(tmp_path):
+    snapshot_dir = tmp_path / "snapshots"
+    logger = SessionLogger(output_dir=str(tmp_path), session_name="snap",
+                           snapshot_dir=str(snapshot_dir))
+    frame = np.zeros((32, 32, 3), dtype=np.uint8)
+
+    logger.log_frame(_telemetry(is_drowsy=True), frame_index=7, frame=frame)
+    summary = logger.close()
+
+    snapshots = list(snapshot_dir.glob("snapshot_*.jpg"))
+    assert len(snapshots) == 1
+    assert summary['events'][0].get('snapshot') == snapshots[0].name
 
 
 def test_html_report_generation(tmp_path):

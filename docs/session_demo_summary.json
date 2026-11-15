@@ -1,24 +1,41 @@
 {
   "session": "demo",
-  "started_at": "2026-11-14T21:45:48",
-  "duration_sec": 8.96,
+  "started_at": "2026-11-15T15:28:12",
+  "duration_sec": 11.59,
   "frames": 540,
   "face_detection_rate_pct": 100.0,
-  "avg_ear": 0.3103,
-  "min_ear": 0.1092,
-  "avg_mor": 0.1599,
-  "max_mor": 0.5537,
-  "avg_fps": 60.48,
+  "avg_ear": 0.3109,
+  "min_ear": 0.1097,
+  "max_ear": 0.4073,
+  "avg_mor": 0.1594,
+  "max_mor": 0.5492,
+  "avg_fps": 47.91,
+  "avg_perclos": 25.5,
+  "max_perclos": 54.97,
+  "avg_fatigue_risk": 52.2,
+  "peak_fatigue_risk": 77.9,
+  "final_fatigue_risk": 52.0,
+  "final_risk_level": "HIGH",
+  "final_risk_factors": {
+    "perclos": 19.212962962962962,
+    "microsleep": 4.0,
+    "yawning": 20.0,
+    "closure": 8.777777777777779
+  },
+  "microsleeps": 1,
+  "longest_closure_sec": 2.63,
+  "blink_rate": 3.3,
+  "yawn_rate": 6.7,
   "state_frames": {
     "DROWSY": 55,
-    "DISTRACTED": 169,
+    "DISTRACTED": 164,
     "YAWNING": 46,
-    "NORMAL": 270
+    "NORMAL": 275
   },
   "gaze_direction_counts": {
-    "CENTER": 408,
+    "CENTER": 413,
     "CLOSED": 83,
-    "RIGHT": 6,
+    "RIGHT": 1,
     "LEFT": 43
   },
   "blinks": 1,
@@ -28,48 +45,494 @@
   "drowsy_events": 1,
   "distraction_events": 4,
   "yawn_events": 1,
+  "risk_series": [
+    {
+      "frame": 5,
+      "risk": 0.0
+    },
+    {
+      "frame": 10,
+      "risk": 0.0
+    },
+    {
+      "frame": 15,
+      "risk": 0.0
+    },
+    {
+      "frame": 20,
+      "risk": 0.0
+    },
+    {
+      "frame": 25,
+      "risk": 0.0
+    },
+    {
+      "frame": 30,
+      "risk": 0.0
+    },
+    {
+      "frame": 35,
+      "risk": 14.7
+    },
+    {
+      "frame": 40,
+      "risk": 12.9
+    },
+    {
+      "frame": 45,
+      "risk": 11.6
+    },
+    {
+      "frame": 50,
+      "risk": 10.4
+    },
+    {
+      "frame": 55,
+      "risk": 9.5
+    },
+    {
+      "frame": 60,
+      "risk": 8.8
+    },
+    {
+      "frame": 65,
+      "risk": 8.1
+    },
+    {
+      "frame": 70,
+      "risk": 7.6
+    },
+    {
+      "frame": 75,
+      "risk": 12.1
+    },
+    {
+      "frame": 80,
+      "risk": 19.6
+    },
+    {
+      "frame": 85,
+      "risk": 26.4
+    },
+    {
+      "frame": 90,
+      "risk": 36.6
+    },
+    {
+      "frame": 95,
+      "risk": 42.1
+    },
+    {
+      "frame": 100,
+      "risk": 47.1
+    },
+    {
+      "frame": 105,
+      "risk": 51.7
+    },
+    {
+      "frame": 110,
+      "risk": 55.9
+    },
+    {
+      "frame": 115,
+      "risk": 58.8
+    },
+    {
+      "frame": 120,
+      "risk": 59.3
+    },
+    {
+      "frame": 125,
+      "risk": 59.9
+    },
+    {
+      "frame": 130,
+      "risk": 60.4
+    },
+    {
+      "frame": 135,
+      "risk": 61.0
+    },
+    {
+      "frame": 140,
+      "risk": 61.6
+    },
+    {
+      "frame": 145,
+      "risk": 62.1
+    },
+    {
+      "frame": 150,
+      "risk": 62.7
+    },
+    {
+      "frame": 155,
+      "risk": 62.8
+    },
+    {
+      "frame": 160,
+      "risk": 62.8
+    },
+    {
+      "frame": 165,
+      "risk": 62.8
+    },
+    {
+      "frame": 170,
+      "risk": 62.8
+    },
+    {
+      "frame": 175,
+      "risk": 62.8
+    },
+    {
+      "frame": 180,
+      "risk": 62.8
+    },
+    {
+      "frame": 185,
+      "risk": 62.8
+    },
+    {
+      "frame": 190,
+      "risk": 62.8
+    },
+    {
+      "frame": 195,
+      "risk": 62.8
+    },
+    {
+      "frame": 200,
+      "risk": 62.8
+    },
+    {
+      "frame": 205,
+      "risk": 62.8
+    },
+    {
+      "frame": 210,
+      "risk": 62.2
+    },
+    {
+      "frame": 215,
+      "risk": 61.0
+    },
+    {
+      "frame": 220,
+      "risk": 59.9
+    },
+    {
+      "frame": 225,
+      "risk": 58.9
+    },
+    {
+      "frame": 230,
+      "risk": 77.9
+    },
+    {
+      "frame": 235,
+      "risk": 76.9
+    },
+    {
+      "frame": 240,
+      "risk": 76.0
+    },
+    {
+      "frame": 245,
+      "risk": 75.1
+    },
+    {
+      "frame": 250,
+      "risk": 74.3
+    },
+    {
+      "frame": 255,
+      "risk": 73.5
+    },
+    {
+      "frame": 260,
+      "risk": 72.7
+    },
+    {
+      "frame": 265,
+      "risk": 71.9
+    },
+    {
+      "frame": 270,
+      "risk": 71.2
+    },
+    {
+      "frame": 275,
+      "risk": 70.5
+    },
+    {
+      "frame": 280,
+      "risk": 69.8
+    },
+    {
+      "frame": 285,
+      "risk": 69.2
+    },
+    {
+      "frame": 290,
+      "risk": 68.6
+    },
+    {
+      "frame": 295,
+      "risk": 67.9
+    },
+    {
+      "frame": 300,
+      "risk": 67.4
+    },
+    {
+      "frame": 305,
+      "risk": 66.8
+    },
+    {
+      "frame": 310,
+      "risk": 66.2
+    },
+    {
+      "frame": 315,
+      "risk": 65.7
+    },
+    {
+      "frame": 320,
+      "risk": 65.2
+    },
+    {
+      "frame": 325,
+      "risk": 64.7
+    },
+    {
+      "frame": 330,
+      "risk": 64.2
+    },
+    {
+      "frame": 335,
+      "risk": 63.7
+    },
+    {
+      "frame": 340,
+      "risk": 63.3
+    },
+    {
+      "frame": 345,
+      "risk": 62.9
+    },
+    {
+      "frame": 350,
+      "risk": 62.4
+    },
+    {
+      "frame": 355,
+      "risk": 62.0
+    },
+    {
+      "frame": 360,
+      "risk": 61.6
+    },
+    {
+      "frame": 365,
+      "risk": 61.2
+    },
+    {
+      "frame": 370,
+      "risk": 60.8
+    },
+    {
+      "frame": 375,
+      "risk": 60.4
+    },
+    {
+      "frame": 380,
+      "risk": 60.1
+    },
+    {
+      "frame": 385,
+      "risk": 59.7
+    },
+    {
+      "frame": 390,
+      "risk": 59.4
+    },
+    {
+      "frame": 395,
+      "risk": 59.0
+    },
+    {
+      "frame": 400,
+      "risk": 58.7
+    },
+    {
+      "frame": 405,
+      "risk": 58.4
+    },
+    {
+      "frame": 410,
+      "risk": 58.1
+    },
+    {
+      "frame": 415,
+      "risk": 57.8
+    },
+    {
+      "frame": 420,
+      "risk": 57.5
+    },
+    {
+      "frame": 425,
+      "risk": 57.2
+    },
+    {
+      "frame": 430,
+      "risk": 56.9
+    },
+    {
+      "frame": 435,
+      "risk": 56.6
+    },
+    {
+      "frame": 440,
+      "risk": 56.4
+    },
+    {
+      "frame": 445,
+      "risk": 56.1
+    },
+    {
+      "frame": 450,
+      "risk": 55.8
+    },
+    {
+      "frame": 455,
+      "risk": 55.6
+    },
+    {
+      "frame": 460,
+      "risk": 55.3
+    },
+    {
+      "frame": 465,
+      "risk": 55.1
+    },
+    {
+      "frame": 470,
+      "risk": 54.9
+    },
+    {
+      "frame": 475,
+      "risk": 54.6
+    },
+    {
+      "frame": 480,
+      "risk": 54.4
+    },
+    {
+      "frame": 485,
+      "risk": 54.2
+    },
+    {
+      "frame": 490,
+      "risk": 54.0
+    },
+    {
+      "frame": 495,
+      "risk": 53.7
+    },
+    {
+      "frame": 500,
+      "risk": 53.5
+    },
+    {
+      "frame": 505,
+      "risk": 53.3
+    },
+    {
+      "frame": 510,
+      "risk": 53.1
+    },
+    {
+      "frame": 515,
+      "risk": 52.9
+    },
+    {
+      "frame": 520,
+      "risk": 52.7
+    },
+    {
+      "frame": 525,
+      "risk": 52.5
+    },
+    {
+      "frame": 530,
+      "risk": 52.4
+    },
+    {
+      "frame": 535,
+      "risk": 52.2
+    },
+    {
+      "frame": 540,
+      "risk": 52.0
+    }
+  ],
   "events": [
     {
-      "timestamp": 1.75,
+      "timestamp": 1.99,
       "frame": 97,
       "type": "DROWSY",
       "message": "Drowsiness detected - prolonged eye closure",
-      "reason": "NORMAL"
+      "reason": "NORMAL",
+      "fatigue_risk": 44.1,
+      "snapshot": "snapshot_000097_drowsy.jpg"
     },
     {
-      "timestamp": 3.92,
+      "timestamp": 5.05,
       "frame": 230,
       "type": "YAWNING",
       "message": "Yawning detected - driver fatigue warning",
-      "reason": "NORMAL"
+      "reason": "NORMAL",
+      "fatigue_risk": 77.9,
+      "snapshot": "snapshot_000230_yawning.jpg"
     },
     {
-      "timestamp": 4.95,
+      "timestamp": 6.29,
       "frame": 292,
       "type": "DISTRACTED",
       "message": "Driver distracted - looking away from the road",
-      "reason": "LOOKING RIGHT / WINDOW"
+      "reason": "LOOKING RIGHT / WINDOW",
+      "fatigue_risk": 68.3,
+      "snapshot": "snapshot_000292_distracted.jpg"
     },
     {
-      "timestamp": 6.09,
+      "timestamp": 7.68,
       "frame": 362,
       "type": "DISTRACTED",
       "message": "Driver distracted - looking away from the road",
-      "reason": "LOOKING DOWN / PHONE"
+      "reason": "LOOKING DOWN / PHONE",
+      "fatigue_risk": 61.4,
+      "snapshot": "snapshot_000362_distracted.jpg"
     },
     {
-      "timestamp": 7.37,
-      "frame": 440,
+      "timestamp": 9.67,
+      "frame": 441,
       "type": "DISTRACTED",
       "message": "Driver distracted - looking away from the road",
-      "reason": "EYES OFF ROAD / GAZE RIGHT"
+      "reason": "EYES OFF ROAD / GAZE RIGHT",
+      "fatigue_risk": 56.3,
+      "snapshot": "snapshot_000441_distracted.jpg"
     },
     {
-      "timestamp": 8.28,
+      "timestamp": 10.79,
       "frame": 498,
       "type": "DISTRACTED",
       "message": "Driver distracted - looking away from the road",
-      "reason": "EYES OFF ROAD / GAZE LEFT"
+      "reason": "EYES OFF ROAD / GAZE LEFT",
+      "fatigue_risk": 53.6,
+      "snapshot": "snapshot_000498_distracted.jpg"
     }
   ]
 }

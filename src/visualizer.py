@@ -44,7 +44,8 @@ class Visualizer:
     def render(self, frame, detection, ear, mor, is_drowsy, is_yawning, is_distracted,
                distraction_reason, yaw, pitch, roll, axis_pts, blinks, yawns, distractions,
                fps, serial_connected, gaze_label="N/A", gaze_x=0.5, gaze_y=0.5,
-               ear_thresh=0.21, mor_thresh=0.38):
+               ear_thresh=0.21, mor_thresh=0.38, perclos=0.0, fatigue_risk=0.0,
+               risk_level="LOW", microsleeps=0):
         """
         Render all visual overlays onto the frame.
         """
@@ -130,16 +131,19 @@ class Visualizer:
         if self.show_hud:
             self._render_hud_panel(output, ear, mor, yaw, pitch, roll,
                                    blinks, yawns, distractions, fps, serial_connected,
-                                   gaze_label, ear_thresh, mor_thresh)
+                                   gaze_label, ear_thresh, mor_thresh,
+                                   perclos, fatigue_risk, risk_level, microsleeps)
 
         return output
 
     def _render_hud_panel(self, frame, ear, mor, yaw, pitch, roll,
                           blinks, yawns, distractions, fps, serial_connected,
-                          gaze_label="N/A", ear_thresh=0.21, mor_thresh=0.38):
+                          gaze_label="N/A", ear_thresh=0.21, mor_thresh=0.38,
+                          perclos=0.0, fatigue_risk=0.0, risk_level="LOW",
+                          microsleeps=0):
         """Render modern semi-transparent HUD dashboard at bottom of frame."""
         h, w = frame.shape[:2]
-        hud_h = 74
+        hud_h = 96
         y_start = h - hud_h
 
         # Semi-transparent dark background
@@ -160,23 +164,42 @@ class Visualizer:
             "N/A": (130, 130, 130),
         }.get(gaze_label, (0, 165, 255))
 
-        r1_y = y_start + 25
-        cv2.putText(frame, f"EAR: {ear:.2f}", (15, r1_y), font, 0.55, ear_color, 2, cv2.LINE_AA)
-        cv2.putText(frame, f"MOR: {mor:.2f}", (135, r1_y), font, 0.55, mor_color, 2, cv2.LINE_AA)
-        cv2.putText(frame, f"Yaw: {yaw:+.1f}", (260, r1_y), font, 0.50, (220, 220, 220), 1, cv2.LINE_AA)
-        cv2.putText(frame, f"Pitch: {pitch:+.1f}", (385, r1_y), font, 0.50, (220, 220, 220), 1, cv2.LINE_AA)
-        cv2.putText(frame, f"Gaze: {gaze_label}", (525, r1_y), font, 0.50, gaze_color, 2, cv2.LINE_AA)
+        r1_y = y_start + 23
+        cv2.putText(frame, f"EAR: {ear:.2f}", (15, r1_y), font, 0.52, ear_color, 2, cv2.LINE_AA)
+        cv2.putText(frame, f"MOR: {mor:.2f}", (120, r1_y), font, 0.52, mor_color, 2, cv2.LINE_AA)
+        cv2.putText(frame, f"Yaw: {yaw:+.1f}", (230, r1_y), font, 0.48, (220, 220, 220), 1, cv2.LINE_AA)
+        cv2.putText(frame, f"Pitch: {pitch:+.1f}", (330, r1_y), font, 0.48, (220, 220, 220), 1, cv2.LINE_AA)
+        cv2.putText(frame, f"Gaze: {gaze_label}", (435, r1_y), font, 0.48, gaze_color, 2, cv2.LINE_AA)
 
         # Row 2: Event Counters and System Telemetry
-        r2_y = y_start + 54
-        cv2.putText(frame, f"Blinks: {blinks}", (15, r2_y), font, 0.50, (255, 255, 255), 1, cv2.LINE_AA)
-        cv2.putText(frame, f"Yawns: {yawns}", (120, r2_y), font, 0.50, (255, 255, 255), 1, cv2.LINE_AA)
-        cv2.putText(frame, f"Distractions: {distractions}", (225, r2_y), font, 0.50, (255, 255, 255), 1, cv2.LINE_AA)
+        r2_y = y_start + 49
+        cv2.putText(frame, f"Blinks: {blinks}", (15, r2_y), font, 0.48, (255, 255, 255), 1, cv2.LINE_AA)
+        cv2.putText(frame, f"Yawns: {yawns}", (110, r2_y), font, 0.48, (255, 255, 255), 1, cv2.LINE_AA)
+        cv2.putText(frame, f"Distractions: {distractions}", (205, r2_y), font, 0.48, (255, 255, 255), 1, cv2.LINE_AA)
+        cv2.putText(frame, f"Microsleeps: {microsleeps}", (355, r2_y), font, 0.48, (255, 255, 255), 1, cv2.LINE_AA)
 
         # FPS & Hardware connection status
-        fps_text = f"FPS: {fps:.1f}"
-        cv2.putText(frame, fps_text, (370, r2_y), font, 0.50, (0, 255, 255), 1, cv2.LINE_AA)
-
-        hw_text = "Embedded: Active" if serial_connected else "Embedded: Off"
+        cv2.putText(frame, f"FPS: {fps:.1f}", (w - 160, r2_y), font, 0.48, (0, 255, 255), 1, cv2.LINE_AA)
+        hw_text = "HW: On" if serial_connected else "HW: Off"
         hw_color = (0, 255, 0) if serial_connected else (130, 130, 130)
-        cv2.putText(frame, hw_text, (w - 165, r2_y), font, 0.50, hw_color, 1, cv2.LINE_AA)
+        cv2.putText(frame, hw_text, (w - 68, r2_y), font, 0.42, hw_color, 1, cv2.LINE_AA)
+
+        # Row 3: PERCLOS & explainable Fatigue Risk Index
+        r3_y = y_start + 78
+        risk_color = {
+            "LOW": (0, 255, 0),
+            "MODERATE": (0, 230, 255),
+            "HIGH": (0, 140, 255),
+            "CRITICAL": (0, 0, 255),
+        }.get(risk_level, (200, 200, 200))
+        cv2.putText(frame, f"PERCLOS: {perclos:.1f}%", (15, r3_y), font, 0.52,
+                    (0, 255, 255), 1, cv2.LINE_AA)
+        cv2.putText(frame, f"FATIGUE RISK: {fatigue_risk:.0f}/100", (185, r3_y), font, 0.52,
+                    risk_color, 2, cv2.LINE_AA)
+        cv2.putText(frame, f"({risk_level})", (410, r3_y), font, 0.46, risk_color, 1, cv2.LINE_AA)
+
+        # Risk bar
+        bar_x, bar_w = 520, 108
+        cv2.rectangle(frame, (bar_x, r3_y - 10), (bar_x + bar_w, r3_y + 2), (60, 60, 60), -1)
+        fill = int(bar_w * max(0.0, min(100.0, fatigue_risk)) / 100.0)
+        cv2.rectangle(frame, (bar_x, r3_y - 10), (bar_x + fill, r3_y + 2), risk_color, -1)

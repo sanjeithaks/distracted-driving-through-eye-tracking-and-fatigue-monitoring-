@@ -26,7 +26,8 @@ from src.session_logger import SessionLogger
 from src.report import generate_html_report
 from src.config import (
     CAMERA_INDEX, FRAME_WIDTH, FRAME_HEIGHT,
-    EAR_THRESHOLD, MOR_THRESHOLD, SERIAL_PORT
+    EAR_THRESHOLD, MOR_THRESHOLD, SERIAL_PORT,
+    SAVE_ALERT_SNAPSHOTS
 )
 
 
@@ -96,6 +97,11 @@ def parse_args():
         default=None,
         help="Optional path for the generated HTML session report"
     )
+    parser.add_argument(
+        "--no-snapshots",
+        action="store_true",
+        help="Do not save evidence images when an alert starts"
+    )
     return parser.parse_args()
 
 
@@ -129,9 +135,17 @@ def main():
         serial_port=args.port
     )
 
-    logger = SessionLogger(output_dir=args.log_dir, enabled=not args.no_log)
+    logger = SessionLogger(
+        output_dir=args.log_dir,
+        enabled=not args.no_log,
+        snapshot_dir=(os.path.join(args.log_dir, "snapshots")
+                      if (SAVE_ALERT_SNAPSHOTS and not args.no_snapshots) else None)
+    )
+    print(f"[INFO] Face landmark backend: {engine.detector.backend}")
     if logger.enabled:
         print(f"[INFO] Session log: {logger.csv_path}")
+        if logger.snapshot_dir:
+            print(f"[INFO] Alert evidence snapshots: {logger.snapshot_dir}")
 
     cap = cv2.VideoCapture(source)
     if not cap.isOpened():
@@ -178,8 +192,8 @@ def main():
             if writer:
                 writer.write(annotated_frame)
 
-            # Record telemetry for the session report
-            logger.log_frame(telemetry, frame_count)
+            # Record telemetry for the session report (+ evidence snapshots)
+            logger.log_frame(telemetry, frame_count, frame=annotated_frame)
 
             # Print telemetry update in terminal every 30 frames
             if frame_count % 30 == 0:
@@ -193,10 +207,11 @@ def main():
 
                 sys.stdout.write(
                     f"\rFrame {frame_count:05d} | EAR: {telemetry['ear']:.2f} | "
-                    f"MOR: {telemetry['mor']:.2f} | Yaw: {telemetry['yaw']:+5.1f} | "
-                    f"Pitch: {telemetry['pitch']:+5.1f} | Gaze: {telemetry['gaze_label']:<6} | "
-                    f"Blinks: {telemetry['blinks']} | "
-                    f"Yawns: {telemetry['yawns']} | Distr: {telemetry['distractions']} | "
+                    f"MOR: {telemetry['mor']:.2f} | Gaze: {telemetry['gaze_label']:<6} | "
+                    f"PERCLOS: {telemetry['perclos_pct']:4.1f}% | "
+                    f"FRI: {telemetry['fatigue_risk']:3.0f} ({telemetry['risk_level']:<8}) | "
+                    f"Microsleeps: {telemetry['microsleeps']} | "
+                    f"Blinks: {telemetry['blinks']} | Yawns: {telemetry['yawns']} | "
                     f"Status: {status_str:<38}"
                 )
                 sys.stdout.flush()
@@ -213,6 +228,7 @@ def main():
                     engine.yawn_tracker.reset()
                     engine.head_pose.reset()
                     engine.gaze_tracker.reset()
+                    engine.fatigue_analyzer.reset()
                     print("\n[INFO] Counters reset.")
 
     except KeyboardInterrupt:
@@ -239,6 +255,13 @@ def main():
             print(f" Distractions (gaze):   {summary['distractions']} "
                   f"({summary['gaze_distractions']} gaze alerts)")
             print(f" Drowsy alert events:   {summary['drowsy_events']}")
+            print(f" Mean PERCLOS:          {summary['avg_perclos']} %")
+            print(f" Peak PERCLOS:          {summary['max_perclos']} %")
+            print(f" Fatigue Risk Index:    {summary['final_fatigue_risk']}/100 "
+                  f"({summary['final_risk_level']}), peak {summary['peak_fatigue_risk']}")
+            print(f" Microsleeps:           {summary['microsleeps']} "
+                  f"(longest closure {summary['longest_closure_sec']} s)")
+            print(f" Blink / Yawn rate:     {summary['blink_rate']} / {summary['yawn_rate']} per min")
             print(f" Session CSV:           {logger.csv_path}")
             print(f" Session summary JSON:  {logger.summary_path}")
 

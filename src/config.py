@@ -55,6 +55,28 @@ GAZE_CONSEC_FRAMES = 15        # sustained off-road gaze frames before alert
 GAZE_CALIBRATION_FRAMES = 30   # frames used to learn the neutral gaze
 GAZE_SMOOTHING = 0.35          # exponential smoothing factor (0-1)
 
+# --- Fatigue Analytics: PERCLOS, Microsleeps & Composite Risk Index ---
+# PERCLOS (Wierwille et al., 1994; FHWA/NHTSA) = proportion of time the eyes
+# are more than ~80% closed, evaluated over a rolling window.
+PERCLOS_WINDOW_FRAMES = 900          # ~30 s at 30 FPS
+PERCLOS_CLOSURE_OPENNESS = 0.30      # eye openness below 30% counts as closed
+PERCLOS_BASELINE_ADAPT = 0.05        # slow adaptation of the open-eye baseline
+MICROSLEEP_MIN_FRAMES = 15           # >= 0.5 s continuous closure = microsleep
+SOURCE_FPS = 30.0                    # nominal source frame rate for time metrics
+
+# Weighted contributions (sum = 100 points)
+FATIGUE_WEIGHT_PERCLOS = 50.0        # PERCLOS contributes up to 50 points
+FATIGUE_WEIGHT_MICROSLEEP = 20.0     # microsleep episodes up to 20 points
+FATIGUE_WEIGHT_YAWN = 20.0           # yawn rate up to 20 points
+FATIGUE_WEIGHT_CLOSURE = 10.0        # longest closure up to 10 points
+FATIGUE_RISK_MODERATE = 25.0
+FATIGUE_RISK_HIGH = 50.0
+FATIGUE_RISK_CRITICAL = 75.0
+
+# --- Alert Evidence Snapshots ---
+SAVE_ALERT_SNAPSHOTS = True
+ALERT_SNAPSHOT_DIR = "snapshots"     # relative to the session log directory
+
 # --- Embedded System (Arduino / Raspberry Pi) ---
 SERIAL_PORT = "COM3"           # Default port (auto-detect fallback available)
 SERIAL_BAUD_RATE = 9600

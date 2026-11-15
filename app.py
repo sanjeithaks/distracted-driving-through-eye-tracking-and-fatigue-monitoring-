@@ -108,6 +108,13 @@ def main():
         metric_yawns = c2.metric("Yawns", "0")
         metric_distractions = c3.metric("Distractions", "0")
 
+        f1, f2, f3 = st.columns(3)
+        metric_perclos = f1.metric("PERCLOS", "0.0%")
+        metric_risk = f2.metric("Fatigue Risk", "0/100")
+        metric_microsleeps = f3.metric("Microsleeps", "0")
+        risk_bar = st.progress(0)
+        risk_caption = st.caption("Risk level: LOW")
+
         status_box = st.empty()
         status_box.success("STATUS: SYSTEM READY")
 
@@ -155,7 +162,9 @@ def main():
         enable_audio=False,
         serial_port=serial_port
     )
-    logger = SessionLogger(output_dir=LOGS_DIR, session_name="dashboard")
+    st.caption(f"Face landmark backend: `{engine.detector.backend}`")
+    logger = SessionLogger(output_dir=LOGS_DIR, session_name="dashboard",
+                           snapshot_dir=os.path.join(LOGS_DIR, "snapshots"))
 
     cap = cv2.VideoCapture(source)
     if not cap.isOpened():
@@ -184,7 +193,7 @@ def main():
 
             frame_num += 1
             annotated_frame, telemetry = engine.process_frame(frame)
-            logger.log_frame(telemetry, frame_num)
+            logger.log_frame(telemetry, frame_num, frame=annotated_frame)
 
             # Update the video preview at ~15 FPS to keep the UI responsive
             now = time.time()
@@ -201,6 +210,15 @@ def main():
                 metric_blinks.metric("Blinks", str(telemetry['blinks']))
                 metric_yawns.metric("Yawns", str(telemetry['yawns']))
                 metric_distractions.metric("Distractions", str(telemetry['distractions']))
+                metric_perclos.metric("PERCLOS", f"{telemetry['perclos_pct']:.1f}%")
+                metric_risk.metric("Fatigue Risk", f"{telemetry['fatigue_risk']:.0f}/100")
+                metric_microsleeps.metric("Microsleeps", str(telemetry['microsleeps']))
+                risk_bar.progress(min(100, int(round(telemetry['fatigue_risk']))))
+                risk_caption.caption(
+                    f"Risk level: {telemetry['risk_level']} • "
+                    f"blink rate {telemetry['blink_rate']:.1f}/min • "
+                    f"yawn rate {telemetry['yawn_rate']:.1f}/min"
+                )
 
                 if telemetry['is_drowsy']:
                     status_box.error("🚨 DROWSINESS ALERT! Seatbelt vibration + buzzer triggered")
@@ -251,6 +269,12 @@ def main():
     s2.metric("Drowsy events", summary['drowsy_events'])
     s3.metric("Yawn events", summary['yawn_events'])
     s4.metric("Gaze alerts", summary['gaze_distractions'])
+
+    q1, q2, q3, q4 = st.columns(4)
+    q1.metric("Mean PERCLOS", f"{summary['avg_perclos']}%")
+    q2.metric("Peak Fatigue Risk", f"{summary['peak_fatigue_risk']}/100")
+    q3.metric("Microsleeps", summary['microsleeps'])
+    q4.metric("Final Risk Level", summary['final_risk_level'])
 
     if summary['events']:
         st.dataframe(pd.DataFrame(summary['events']), use_container_width=True)
