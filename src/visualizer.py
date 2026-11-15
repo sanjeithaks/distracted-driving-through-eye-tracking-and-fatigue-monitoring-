@@ -20,11 +20,13 @@ class Visualizer:
                  show_landmarks=True,
                  show_bbox=True,
                  show_axis=True,
-                 show_hud=True):
+                 show_hud=True,
+                 show_framing_hint=False):
         self.show_landmarks = show_landmarks
         self.show_bbox = show_bbox
         self.show_axis = show_axis
         self.show_hud = show_hud
+        self.show_framing_hint = show_framing_hint
 
         # Colors (BGR)
         self.COLOR_GREEN = (0, 255, 0)
@@ -57,7 +59,8 @@ class Visualizer:
                distraction_reason, yaw, pitch, roll, axis_pts, blinks, yawns, distractions,
                fps, serial_connected, gaze_label="N/A", gaze_x=0.5, gaze_y=0.5,
                ear_thresh=0.21, mor_thresh=0.38, perclos=0.0, fatigue_risk=0.0,
-               risk_level="LOW", microsleeps=0):
+               risk_level="LOW", microsleeps=0, head_calibrated=True,
+               calibration_progress=1.0):
         """
         Render all visual overlays onto the frame.
         """
@@ -134,29 +137,38 @@ class Visualizer:
             self.draw_text_with_outline(output, "FACE DETECTED", (30, banner_y),
                                         font_scale=0.9, color=self.COLOR_GREEN, thickness=2, outline_thickness=5)
 
-            # Live-camera framing hint: warn when the face is cut off at the
-            # bottom of the frame (common when a laptop camera is too low).
-            if y + bh > h - 105:
-                self.draw_text_with_outline(output, "MOVE BACK - MOUTH MUST BE VISIBLE", (w - 380, 30),
-                                            font_scale=0.50, color=(0, 165, 255),
-                                            thickness=2, outline_thickness=4)
-            elif bw < w * 0.12:
-                self.draw_text_with_outline(output, "MOVE CLOSER TO CAMERA", (w - 300, 30),
-                                            font_scale=0.55, color=(0, 165, 255),
-                                            thickness=2, outline_thickness=4)
+            # Live-camera framing/calibration hints (only for real camera input,
+            # not the synthetic demo clip).
+            if self.show_framing_hint:
+                if not head_calibrated:
+                    pct = int(max(0.0, min(1.0, calibration_progress)) * 100)
+                    self.draw_text_with_outline(
+                        output,
+                        f"CALIBRATING NEUTRAL POSE {pct}% - LOOK STRAIGHT",
+                        (w - 470, 30), font_scale=0.50, color=(0, 200, 255),
+                        thickness=2, outline_thickness=4)
+                elif y + bh > h - 105:
+                    self.draw_text_with_outline(output, "MOVE BACK - MOUTH MUST BE VISIBLE", (w - 380, 30),
+                                                font_scale=0.50, color=(0, 165, 255),
+                                                thickness=2, outline_thickness=4)
+                elif bw < w * 0.12:
+                    self.draw_text_with_outline(output, "MOVE CLOSER TO CAMERA", (w - 300, 30),
+                                                font_scale=0.55, color=(0, 165, 255),
+                                                thickness=2, outline_thickness=4)
 
         else:
             # No face detected - show a framing box so the user can position
             # their whole face (including the mouth, needed for yawn detection).
-            gx1, gy1 = int(w * 0.22), 95
-            gx2, gy2 = int(w * 0.78), h - 150
-            self._draw_dashed_rect(output, (gx1, gy1), (gx2, gy2), (0, 165, 255), 2)
             self.draw_text_with_outline(output, "NO FACE DETECTED", (30, 50),
                                         font_scale=1.0, color=(0, 165, 255), thickness=2, outline_thickness=5)
-            self.draw_text_with_outline(output, "PLACE WHOLE FACE IN BOX", (gx1 + 10, gy1 - 12),
-                                        font_scale=0.55, color=(0, 165, 255), thickness=2, outline_thickness=4)
-            self.draw_text_with_outline(output, "INCLUDE YOUR MOUTH", (gx1 + 10, gy2 + 28),
-                                        font_scale=0.52, color=(0, 165, 255), thickness=1, outline_thickness=3)
+            if self.show_framing_hint:
+                gx1, gy1 = int(w * 0.22), 95
+                gx2, gy2 = int(w * 0.78), h - 150
+                self._draw_dashed_rect(output, (gx1, gy1), (gx2, gy2), (0, 165, 255), 2)
+                self.draw_text_with_outline(output, "PLACE WHOLE FACE IN BOX", (gx1 + 10, gy1 - 12),
+                                            font_scale=0.55, color=(0, 165, 255), thickness=2, outline_thickness=4)
+                self.draw_text_with_outline(output, "INCLUDE YOUR MOUTH", (gx1 + 10, gy2 + 28),
+                                            font_scale=0.52, color=(0, 165, 255), thickness=1, outline_thickness=3)
 
         # 2. Telemetry HUD Bar at Bottom
         if self.show_hud:

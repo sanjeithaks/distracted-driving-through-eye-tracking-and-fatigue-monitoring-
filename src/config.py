@@ -33,25 +33,34 @@ MOR_CONSEC_FRAMES = 12
 # Cooldown frames between consecutive yawns
 YAWN_COOLDOWN_FRAMES = 30
 
-# --- Head Pose / Distraction Thresholds (in degrees) ---
-# Yaw: Looking left/right (peeping window, talking to passenger beside driver)
-YAW_LEFT_THRESHOLD = 12.0     # Looking left / passenger from camera's perspective
-YAW_RIGHT_THRESHOLD = -12.0   # Looking right / window from camera's perspective
+# --- Head Pose / Distraction Thresholds (in degrees, deviation from neutral) ---
+# Calibrated per-driver; small movements inside the dead-band are ignored.
+# 25 deg sustained ~1 s is used for a clear head turn; a brief glance does not alert.
+YAW_LEFT_THRESHOLD = 25.0     # deviation to the left / passenger
+YAW_RIGHT_THRESHOLD = -25.0   # deviation to the right / window
 
-# Pitch: Looking down (looking into phone / texting) or looking up
-PITCH_DOWN_THRESHOLD = -14.0  # Head tilted down looking at mobile phone
-PITCH_UP_THRESHOLD = 20.0     # Head tilted up
+# Pitch: looking down (phone) or up. Deviation from the calibrated neutral pose.
+PITCH_DOWN_THRESHOLD = -22.0
+PITCH_UP_THRESHOLD = 25.0
 
-# Consecutive frames for head distraction alert
-HEAD_POSE_CONSEC_FRAMES = 10
+# Consecutive frames (at 30 FPS) for a sustained head-pose distraction
+HEAD_POSE_CONSEC_FRAMES = 30
+# Frames below the release threshold needed to clear the alert (hysteresis)
+HEAD_POSE_RELEASE_FRAMES = 10
+HEAD_POSE_EXIT_MARGIN = 6.0
+
+# Personalized calibration: median neutral yaw/pitch from the first stable frames
+HEAD_CALIBRATION_FRAMES = 45
+HEAD_CALIBRATION_MAX_FRAMES = 120
+HEAD_POSE_SMOOTHING = 0.5
 
 # --- Iris / Eye-Gaze Tracking (true eye tracking) ---
 # Normalised iris position is ~0.5 when looking straight ahead.
 # A deviation larger than these deltas is treated as an off-road gaze.
-GAZE_HORIZONTAL_DELTA = 0.09
-GAZE_VERTICAL_DELTA = 0.18
+GAZE_HORIZONTAL_DELTA = 0.10
+GAZE_VERTICAL_DELTA = 0.20
 GAZE_CENTER_BAND = 0.03        # dead-band around the neutral position
-GAZE_CONSEC_FRAMES = 15        # sustained off-road gaze frames before alert
+GAZE_CONSEC_FRAMES = 30        # sustained off-road gaze (~1 s) before alert
 GAZE_CALIBRATION_FRAMES = 30   # frames used to learn the neutral gaze
 GAZE_SMOOTHING = 0.35          # exponential smoothing factor (0-1)
 

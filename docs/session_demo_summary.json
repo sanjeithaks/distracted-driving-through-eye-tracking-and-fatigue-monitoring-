@@ -1,15 +1,15 @@
 {
   "session": "demo",
-  "started_at": "2026-11-15T16:10:29",
-  "duration_sec": 12.34,
+  "started_at": "2026-11-15T17:05:08",
+  "duration_sec": 18.67,
   "frames": 540,
   "face_detection_rate_pct": 100.0,
-  "avg_ear": 0.3109,
+  "avg_ear": 0.3057,
   "min_ear": 0.1097,
   "max_ear": 0.4073,
-  "avg_mor": 0.1594,
+  "avg_mor": 0.1739,
   "max_mor": 0.5492,
-  "avg_fps": 44.07,
+  "avg_fps": 29.35,
   "avg_perclos": 25.5,
   "max_perclos": 54.97,
   "avg_fatigue_risk": 52.2,
@@ -23,27 +23,27 @@
     "closure": 8.777777777777779
   },
   "microsleeps": 1,
+  "head_calibrated": true,
   "longest_closure_sec": 2.63,
   "blink_rate": 3.3,
   "yawn_rate": 6.7,
   "state_frames": {
     "DROWSY": 55,
-    "DISTRACTED": 164,
+    "DISTRACTED": 142,
     "YAWNING": 46,
-    "NORMAL": 275
+    "NORMAL": 297
   },
   "gaze_direction_counts": {
-    "CENTER": 413,
+    "CENTER": 429,
     "CLOSED": 83,
-    "RIGHT": 1,
-    "LEFT": 43
+    "LEFT": 28
   },
   "blinks": 1,
   "yawns": 2,
-  "distractions": 4,
-  "gaze_distractions": 2,
+  "distractions": 2,
+  "gaze_distractions": 1,
   "drowsy_events": 1,
-  "distraction_events": 4,
+  "distraction_events": 2,
   "yawn_events": 1,
   "risk_series": [
     {
@@ -481,7 +481,7 @@
   ],
   "events": [
     {
-      "timestamp": 2.22,
+      "timestamp": 3.58,
       "frame": 97,
       "type": "DROWSY",
       "message": "Drowsiness detected - prolonged eye closure",
@@ -490,7 +490,7 @@
       "snapshot": "snapshot_000097_drowsy.jpg"
     },
     {
-      "timestamp": 5.29,
+      "timestamp": 8.29,
       "frame": 230,
       "type": "YAWNING",
       "message": "Yawning detected - driver fatigue warning",
@@ -499,40 +499,22 @@
       "snapshot": "snapshot_000230_yawning.jpg"
     },
     {
-      "timestamp": 6.64,
-      "frame": 292,
+      "timestamp": 11.11,
+      "frame": 317,
       "type": "DISTRACTED",
       "message": "Driver distracted - looking away from the road",
       "reason": "LOOKING RIGHT / WINDOW",
-      "fatigue_risk": 68.3,
-      "snapshot": "snapshot_000292_distracted.jpg"
+      "fatigue_risk": 65.5,
+      "snapshot": "snapshot_000317_distracted.jpg"
     },
     {
-      "timestamp": 8.13,
-      "frame": 362,
-      "type": "DISTRACTED",
-      "message": "Driver distracted - looking away from the road",
-      "reason": "LOOKING DOWN / PHONE",
-      "fatigue_risk": 61.4,
-      "snapshot": "snapshot_000362_distracted.jpg"
-    },
-    {
-      "timestamp": 9.96,
-      "frame": 441,
-      "type": "DISTRACTED",
-      "message": "Driver distracted - looking away from the road",
-      "reason": "EYES OFF ROAD / GAZE RIGHT",
-      "fatigue_risk": 56.3,
-      "snapshot": "snapshot_000441_distracted.jpg"
-    },
-    {
-      "timestamp": 11.18,
-      "frame": 498,
+      "timestamp": 17.65,
+      "frame": 513,
       "type": "DISTRACTED",
       "message": "Driver distracted - looking away from the road",
       "reason": "EYES OFF ROAD / GAZE LEFT",
-      "fatigue_risk": 53.6,
-      "snapshot": "snapshot_000498_distracted.jpg"
+      "fatigue_risk": 53.0,
+      "snapshot": "snapshot_000513_distracted.jpg"
     }
   ]
 }

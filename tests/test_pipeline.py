@@ -27,7 +27,8 @@ def test_head_pose_estimation_straight():
 
 
 def test_head_pose_distraction_tracker():
-    estimator = HeadPoseEstimator(yaw_left_thresh=20.0, consec_frames=3)
+    estimator = HeadPoseEstimator(yaw_left_thresh=20.0, consec_frames=3,
+                                  calibration_frames=0, smoothing=1.0)
 
     # 2 frames looking left
     estimator.update(yaw=30.0, pitch=0.0, roll=0.0)
@@ -39,6 +40,39 @@ def test_head_pose_distraction_tracker():
     assert is_distracted
     assert "LOOKING LEFT" in reason
     assert total == 1
+
+
+def test_head_pose_calibration_and_hysteresis():
+    estimator = HeadPoseEstimator(
+        yaw_left_thresh=25.0, consec_frames=3,
+        calibration_frames=5, calibration_max_frames=5,
+        exit_margin=6.0, release_frames=3, smoothing=1.0)
+
+    # Learn a neutral pose of yaw=5
+    for _ in range(5):
+        estimator.update(yaw=5.0, pitch=0.0, roll=0.0)
+    assert estimator.is_calibrated
+    assert estimator.baseline_yaw == pytest.approx(5.0, abs=0.1)
+
+    # A small 10-degree offset must NOT alert
+    for _ in range(10):
+        out = estimator.update(yaw=15.0, pitch=0.0, roll=0.0)
+        assert not out[0]
+
+    # A large sustained turn (35-degree deviation) alerts after 3 frames
+    for _ in range(3):
+        is_distracted, reason, total = estimator.update(yaw=40.0, pitch=0.0, roll=0.0)
+    assert is_distracted and "LOOKING LEFT" in reason and total == 1
+
+    # Hysteresis: returning near the edge keeps the alert
+    for _ in range(5):
+        is_distracted, _, _ = estimator.update(yaw=25.0, pitch=0.0, roll=0.0)
+    assert is_distracted
+
+    # Returning well inside the dead-band clears it after the release frames
+    for _ in range(4):
+        is_distracted, _, _ = estimator.update(yaw=20.0, pitch=0.0, roll=0.0)
+    assert not is_distracted
 
 
 def test_face_mesh_detector_on_synthetic_frame():

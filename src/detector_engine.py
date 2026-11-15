@@ -41,7 +41,8 @@ class DriverMonitoringEngine:
                  mor_consec_frames=MOR_CONSEC_FRAMES,
                  enable_serial=ENABLE_EMBEDDED_SERIAL,
                  enable_audio=ENABLE_AUDIO_ALARM,
-                 serial_port=SERIAL_PORT):
+                 serial_port=SERIAL_PORT,
+                 show_framing_hint=False):
         # 1. Detector
         self.detector = FaceMeshDetector()
 
@@ -81,7 +82,8 @@ class DriverMonitoringEngine:
             show_landmarks=SHOW_LANDMARKS,
             show_bbox=SHOW_BOUNDING_BOX,
             show_axis=SHOW_HEAD_AXIS,
-            show_hud=SHOW_METRICS_HUD
+            show_hud=SHOW_METRICS_HUD,
+            show_framing_hint=show_framing_hint
         )
 
         # FPS calculation
@@ -147,7 +149,8 @@ class DriverMonitoringEngine:
 
                 # Gaze distraction is used when the head itself is still, e.g.
                 # the driver turns only their eyes away from the road.
-                if not is_distracted and is_gaze_distracted:
+                if (not is_distracted and is_gaze_distracted
+                        and self.head_pose.is_calibrated):
                     is_distracted = True
                     distraction_reason = f"EYES OFF ROAD / GAZE {gaze_label}"
         else:
@@ -216,7 +219,9 @@ class DriverMonitoringEngine:
             perclos=fatigue['perclos_pct'],
             fatigue_risk=fatigue['fatigue_risk'],
             risk_level=fatigue['risk_level'],
-            microsleeps=fatigue['microsleeps']
+            microsleeps=fatigue['microsleeps'],
+            head_calibrated=self.head_pose.is_calibrated,
+            calibration_progress=self.head_pose.calibration_progress
         )
 
         telemetry = {
@@ -234,6 +239,10 @@ class DriverMonitoringEngine:
             'gaze_x': gaze_x,
             'gaze_y': gaze_y,
             'is_gaze_distracted': is_gaze_distracted,
+            'head_calibrated': self.head_pose.is_calibrated,
+            'calibration_progress': round(self.head_pose.calibration_progress, 3),
+            'yaw_deviation': round(self.head_pose.yaw_deviation, 2),
+            'pitch_deviation': round(self.head_pose.pitch_deviation, 2),
             'blinks': self.eye_tracker.total_blinks,
             'yawns': self.yawn_tracker.total_yawns,
             'distractions': total_distractions,

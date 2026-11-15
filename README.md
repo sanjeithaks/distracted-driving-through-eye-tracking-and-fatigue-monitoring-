@@ -147,10 +147,14 @@ $$\text{MOR} = \frac{\|p_{15} - p_{23}\| + \|p_{16} - p_{22}\| + \|p_{17} - p_{2
 - **Yawning**: When $\text{MOR} > 0.38$ for $\ge 12$ consecutive frames, the system displays `YAWNING DETECTED!`, sounds a fatigue tone, and increments the cumulative yawn counter.
 
 ### 3. 3D Head Pose Estimation & Distraction Tracking
-Using 2D landmarks (nose tip, chin, eye corners, mouth corners) projected against a standard 3D anthropometric face model via OpenCV `cv2.solvePnP` and `cv2.RQDecomp3x3`, the system extracts Euler angles:
-- **Yaw ($|\text{Yaw}| > 12^\circ$)**: Detects when the driver turns away from the forward road (e.g. peeping through window, talking to side passengers - *Figures 7 & 8*).
-- **Pitch ($\text{Pitch} < -14^\circ$)**: Detects when the driver tilts down toward their lap / mobile phone (texting while driving - *Figure 9*).
-- Triggers the prominent `LOOKING AWAY!` alert banner.
+Using 2D landmarks (nose tip, chin, eye corners, mouth corners) projected against a standard 3D anthropometric face model via OpenCV `cv2.solvePnP` and `cv2.RQDecomp3x3`, the system extracts Euler angles. To avoid warning on tiny head movements, the module adds:
+
+- **Per-driver neutral calibration** — the median yaw/pitch of the first stable frames (~1.5 s) becomes the neutral pose. The HUD shows `CALIBRATING NEUTRAL POSE — LOOK STRAIGHT` until it finishes.
+- **Large deviation only** — alert when the *deviation from neutral* exceeds **~25° yaw** or **~22° pitch**, sustained for **1 s (30 frames)**. Small shifts of 10–15° are ignored.
+- **Hysteresis** — after alerting, the head must return well inside the dead-band for 10 frames before the warning clears, preventing on/off chatter.
+- **Very slow neutral adaptation** while centred keeps the calibration valid if the driver changes posture.
+
+Rationale: driver-specific head-yaw thresholds are recommended in the literature (Talamonti et al., 2014; Chalmers, 2021), and NHTSA highlights sustained off-road glances of ~2 s as the risk threshold — not micro-glances. Triggers the `LOOKING AWAY!` banner only for real, sustained turns.
 
 ### 4. Iris-Based Eye-Gaze Tracking
 Head pose alone cannot detect a driver who keeps their head straight but moves only
@@ -164,8 +168,8 @@ MediaPipe face mesh**, which includes the iris.
 - The neutral gaze is calibrated automatically from the first 30 frames and
   slowly adapted while the driver looks at the road.
 - A sustained deviation (`gx` / `gy` outside the calibrated dead-band for
-  **15 consecutive frames**) raises `LOOKING AWAY!` with the reason
-  `EYES OFF ROAD / GAZE LEFT|RIGHT|UP|DOWN`.
+  **30 consecutive frames ≈ 1 s**) raises `LOOKING AWAY!` with the reason
+  `EYES OFF ROAD / GAZE LEFT|RIGHT|UP|DOWN`. Brief eye glances no longer alert.
 - Gaze is ignored while the eyes are closed (`EAR < 0.21`) to avoid false alerts
   during blinks and drowsiness.
 - Tuning parameters live in `src/config.py` (`GAZE_HORIZONTAL_DELTA`,
@@ -461,9 +465,10 @@ tests/test_logger.py::test_alert_evidence_snapshot PASSED
 tests/test_logger.py::test_html_report_generation PASSED
 tests/test_pipeline.py::test_head_pose_estimation_straight PASSED
 tests/test_pipeline.py::test_head_pose_distraction_tracker PASSED
+tests/test_pipeline.py::test_head_pose_calibration_and_hysteresis PASSED
 tests/test_pipeline.py::test_face_mesh_detector_on_synthetic_frame PASSED
 tests/test_pipeline.py::test_driver_monitoring_engine_frame PASSED
-============================= 22 passed in 13.60s ==============================
+============================= 23 passed in 12.45s ==============================
 ```
 
 ---
@@ -477,6 +482,9 @@ tests/test_pipeline.py::test_driver_monitoring_engine_frame PASSED
 5. Kazemi, V., & Sullivan, J. *One Millisecond Face Alignment with an Ensemble of Regression Trees.* CVPR, 2014.
 6. Google MediaPipe Face Mesh / Face Landmarker — https://github.com/google-ai-edge/mediapipe (Apache-2.0).
 7. Yakhyokhuja Valikhujaev, *mediapipe-face-mesh-onnx* — ONNX model exports used by the OpenCV-DNN fallback (Apache-2.0). https://github.com/yakhyo/mediapipe-face-mesh-onnx
+8. Talamonti, W., Kochhar, D., & Tijerina, L. (2014). *Driver-specific head-yaw thresholds for glance prediction.* — supports personalized neutral calibration.
+9. Chalmers University (2021). *Investigating the correspondence between driver head position and glance location.* https://pmc.ncbi.nlm.nih.gov/articles/PMC7924698
+10. NHTSA. *Driver Distraction Guidelines* — single off-road glance ≤ 2 s, total eyes-off-road ≤ 12 s. https://www.nhtsa.gov/
 
 ---
 

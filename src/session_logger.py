@@ -111,6 +111,7 @@ class SessionLogger:
                     "gaze", "gaze_x", "gaze_y",
                     "perclos", "fatigue_risk", "risk_level",
                     "microsleeps", "blink_rate", "yawn_rate",
+                    "yaw_dev", "pitch_dev", "head_calibrated",
                     "blinks", "yawns", "distractions", "fps",
                     "distraction_reason"
                 ])
@@ -214,6 +215,9 @@ class SessionLogger:
                     "microsleeps": int(telemetry.get('microsleeps', 0)),
                     "blink_rate": round(float(telemetry.get('blink_rate', 0.0)), 2),
                     "yawn_rate": round(float(telemetry.get('yawn_rate', 0.0)), 2),
+                    "yaw_dev": round(float(telemetry.get('yaw_deviation', 0.0)), 2),
+                    "pitch_dev": round(float(telemetry.get('pitch_deviation', 0.0)), 2),
+                    "head_calibrated": int(bool(telemetry.get('head_calibrated', True))),
                     "blinks": int(telemetry.get('blinks', 0)),
                     "yawns": int(telemetry.get('yawns', 0)),
                     "distractions": int(telemetry.get('distractions', 0)),
@@ -255,6 +259,7 @@ class SessionLogger:
             "final_risk_level": last.get('risk_level', 'LOW'),
             "final_risk_factors": last.get('risk_factors', {}),
             "microsleeps": int(last.get('microsleeps', 0)),
+            "head_calibrated": bool(last.get('head_calibrated', True)),
             "longest_closure_sec": round(float(last.get('longest_closure_sec', 0.0)), 2),
             "blink_rate": round(float(last.get('blink_rate', 0.0)), 1),
             "yawn_rate": round(float(last.get('yawn_rate', 0.0)), 1),

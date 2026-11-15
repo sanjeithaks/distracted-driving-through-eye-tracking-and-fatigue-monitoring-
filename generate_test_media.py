@@ -201,7 +201,7 @@ def generate_scenario_video(output_path="demo_sample_driving.mp4", total_frames=
         elif 281 < i <= 350:
             eye_h = 14
             mouth_h = 8
-            turn = 1.5  # Full head turn
+            turn = 2.0  # Large, sustained head turn (~26 deg yaw)
 
         # Scenario 6: Looking Down / Mobile Phone (351-420)
         elif 351 < i <= 420:

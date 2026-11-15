@@ -170,8 +170,10 @@ def main():
         )
         st.sidebar.info(
             "**Live monitoring**\n\n"
-            "Keep your **whole face including your mouth** visible in the "
-            "camera. Try closing your eyes, yawning, or turning your head."
+            "Keep your **whole face including your mouth** visible. "
+            "For the first ~2 seconds **look straight ahead** so your neutral "
+            "head pose calibrates. Small head movements are ignored — only a "
+            "sustained ~25° turn triggers a warning."
         )
         if st.sidebar.button("📷 Test camera framing", width="stretch"):
             test_cap = cv2.VideoCapture(0)
@@ -278,7 +280,8 @@ def main():
             mor_thresh=mor_thresh,
             enable_serial=enable_serial,
             enable_audio=False,
-            serial_port=serial_port
+            serial_port=serial_port,
+            show_framing_hint=(input_mode == "Live Webcam Stream")
         )
     st.caption(f"Face landmark backend: `{engine.detector.backend}`")
     logger = SessionLogger(output_dir=LOGS_DIR, session_name="dashboard",

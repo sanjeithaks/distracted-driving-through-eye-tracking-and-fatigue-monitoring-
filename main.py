@@ -145,7 +145,8 @@ def main():
         mor_thresh=args.mor_thresh,
         enable_serial=serial_enabled,
         enable_audio=not args.no_audio,
-        serial_port=args.port
+        serial_port=args.port,
+        show_framing_hint=isinstance(source, int)
     )
 
     logger = SessionLogger(
