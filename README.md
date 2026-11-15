@@ -21,6 +21,7 @@ An end-to-end computer vision and embedded safety system designed to prevent veh
 | Install dependencies once | **`INSTALL.bat`** | Installs `requirements.txt` |
 | **Open all output files** | **`OPEN_OUTPUT.bat`** | Opens `docs/OUTPUTS.html` with every report, image and video |
 | **Open the web working model** | **`START_WEB_DASHBOARD.bat`** | Opens the Streamlit dashboard at `http://localhost:8501` |
+| **Feel like you are driving** | **`START_DRIVING_MODE.bat`** | Full-screen driving cockpit with moving road, speedometer, steering wheel + live monitoring |
 | Run the live webcam | **`START_LIVE_CAMERA.bat`** | Opens a webcam window; press `q` / `Esc` to stop |
 | Run without a camera | **`START_DEMO.bat`** | Processes 6 scenarios and writes the HTML report |
 
@@ -339,6 +340,23 @@ streamlit run app.py
 ```
 Open your browser at `http://localhost:8501`.
 
+### 4. Immersive Driving Mode
+A full-screen procedural driving cockpit wrapped around the live monitoring pipeline:
+```bash
+python driving_mode.py            # live webcam, full-screen
+python driving_mode.py --windowed # 1280x720 window
+```
+Or double-click **`START_DRIVING_MODE.bat`**.
+
+- Moving perspective road, roadside trees/poles, sky, sun and windshield pillars
+- Speedometer, RPM bar, gear indicator and a rotating steering wheel
+- Live driver-camera inset with face mesh, gaze, PERCLOS and FRI
+- **Risk-adaptive driving:** drowsiness slows the car and pulses the simulated seatbelt motor; distraction makes the car drift toward the lane edge
+- Controls: `A/D` or `←/→` steer, `W/S` or `↑/↓` accelerate/brake, `R` reset/recalibrate, `F` fullscreen, `Q/Esc` quit
+- Save the full driving view with `--save driving.mp4`
+
+![Immersive driving mode](docs/driving_mode_preview.jpg)
+
 ---
 
 ## Embedded Hardware Connections (Optional)
@@ -391,6 +409,7 @@ distracted-driving-through-eye-tracking-and-fatigue-monitoring-/
 │   ├── visualizer.py             # Paper-accurate HUD, banners & telemetry renderer
 │   ├── session_logger.py         # Per-frame CSV logging, evidence snapshots & summary JSON
 │   ├── report.py                 # Standalone HTML report with fatigue timeline
+│   ├── driving_simulator.py      # Immersive procedural driving cockpit renderer
 │   └── detector_engine.py        # Complete integrated pipeline engine
 │
 ├── models/
@@ -421,12 +440,14 @@ distracted-driving-through-eye-tracking-and-fatigue-monitoring-/
 │
 ├── logs/                         # Runtime session logs (git-ignored)
 ├── main.py                       # CLI application for real-time webcam & video monitoring
+├── driving_mode.py               # Immersive full-screen driving cockpit
 ├── demo.py                       # Self-contained demo script with automated verification
 ├── app.py                        # Modern Streamlit interactive web dashboard
 ├── generate_test_media.py        # Synthetic scenario driving video generator
 ├── INSTALL.bat                   # One-click dependency installer (Windows)
 ├── OPEN_OUTPUT.bat               # One-click output index (reports, images, videos)
 ├── START_WEB_DASHBOARD.bat       # One-click web working model launcher
+├── START_DRIVING_MODE.bat        # One-click immersive driving cockpit
 ├── START_LIVE_CAMERA.bat         # One-click live webcam launcher
 ├── START_DEMO.bat                # One-click automated demo launcher
 ├── requirements.txt              # Project dependencies
@@ -468,7 +489,8 @@ tests/test_pipeline.py::test_head_pose_distraction_tracker PASSED
 tests/test_pipeline.py::test_head_pose_calibration_and_hysteresis PASSED
 tests/test_pipeline.py::test_face_mesh_detector_on_synthetic_frame PASSED
 tests/test_pipeline.py::test_driver_monitoring_engine_frame PASSED
-============================= 23 passed in 12.45s ==============================
+tests/test_driving.py::test_driving_simulator_renders_and_reacts_to_state PASSED
+============================= 24 passed in 12.99s ==============================
 ```
 
 ---

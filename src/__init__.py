@@ -11,6 +11,7 @@ from .embedded_serial import EmbeddedSerialBridge
 from .visualizer import Visualizer
 from .session_logger import SessionLogger
 from .report import generate_html_report
+from .driving_simulator import DrivingSimulator
 
 __all__ = [
     'DriverMonitoringEngine',
