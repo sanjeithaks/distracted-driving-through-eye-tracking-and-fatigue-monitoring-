@@ -14,6 +14,39 @@ An end-to-end computer vision and embedded safety system designed to prevent veh
 
 ---
 
+## 🚀 Quick Start (Windows — easiest way)
+
+| I want to… | Double-click | What happens |
+|---|---|---|
+| Install dependencies once | **`INSTALL.bat`** | Installs `requirements.txt` |
+| **Open the web working model** | **`START_WEB_DASHBOARD.bat`** | Opens the Streamlit dashboard at `http://localhost:8501` |
+| Run the live webcam | **`START_LIVE_CAMERA.bat`** | Opens a webcam window; press `q` / `Esc` to stop |
+| Run without a camera | **`START_DEMO.bat`** | Processes 6 scenarios and writes the HTML report |
+
+**Dashboard steps:** double-click `START_WEB_DASHBOARD.bat` → browser opens →
+choose *Run Built-in Demo Clip* / *Upload Driving Video File* / *Live Webcam Stream* in
+the sidebar → press **🚀 Start Monitoring**. Keep the terminal window open while using it.
+
+### Manual commands (any OS)
+
+```bash
+python -m pip install -r requirements.txt
+
+# Web working model (recommended)
+python -m streamlit run app.py        # open http://localhost:8501
+
+# Live webcam window
+python main.py                        # q / Esc to quit
+
+# Automated demo, no camera
+python demo.py
+```
+
+> If your Windows camera is low, raise it so your **whole face sits in the upper-middle**
+> of the frame. The live HUD shows `CENTER FACE IN FRAME` when the face is cut off.
+
+---
+
 ## Table of Contents
 1. [System Architecture](#system-architecture)
 2. [Key Detection Modules](#key-detection-modules)
@@ -371,6 +404,10 @@ distracted-driving-through-eye-tracking-and-fatigue-monitoring-/
 ├── demo.py                       # Self-contained demo script with automated verification
 ├── app.py                        # Modern Streamlit interactive web dashboard
 ├── generate_test_media.py        # Synthetic scenario driving video generator
+├── INSTALL.bat                   # One-click dependency installer (Windows)
+├── START_WEB_DASHBOARD.bat       # One-click web working model launcher
+├── START_LIVE_CAMERA.bat         # One-click live webcam launcher
+├── START_DEMO.bat                # One-click automated demo launcher
 ├── requirements.txt              # Project dependencies
 ├── driver_ieee.pdf               # Original IEEE research paper
 └── README.md                     # Documentation
