@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Driver Monitoring — Output Files</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family:"Segoe UI",Arial,sans-serif; background:#0b1220; color:#e2e8f0; }
+  header { padding:30px 40px; background:linear-gradient(120deg,#0f172a,#1e3a8a); border-bottom:1px solid #1e293b; }
+  h1 { margin:0 0 6px; font-size:26px; }
+  .sub { color:#93c5fd; font-size:14px; }
+  main { max-width:1100px; margin:0 auto; padding:28px 40px 50px; }
+  h2 { color:#94a3b8; font-size:16px; text-transform:uppercase; letter-spacing:.08em; margin:30px 0 14px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:14px; }
+  a.card { display:block; text-decoration:none; background:#111c30; border:1px solid #1e293b;
+           border-radius:12px; padding:18px 20px; transition:.15s; }
+  a.card:hover { border-color:#3b82f6; background:#13213a; }
+  .card .title { font-size:16px; font-weight:700; color:#7dd3fc; margin-bottom:6px; }
+  .card .desc { font-size:13px; color:#cbd5e1; line-height:1.45; }
+  .card .path { font-size:11px; color:#64748b; margin-top:8px; font-family:Consolas,monospace; }
+  .note { background:#111c30; border-left:4px solid #f59e0b; border-radius:8px;
+          padding:14px 18px; font-size:13px; color:#cbd5e1; margin:18px 0; }
+  code { background:#0b1220; padding:2px 6px; border-radius:4px; color:#7dd3fc; }
+  footer { color:#64748b; font-size:12px; margin-top:34px; }
+  .tag { display:inline-block; font-size:10px; font-weight:700; padding:2px 8px;
+         border-radius:999px; background:#3b0764; color:#e9d5ff; margin-left:6px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🚗 Driver Monitoring — Output Files</h1>
+  <div class="sub">Eye tracking · fatigue monitoring · distracted driving · PC simulation</div>
+</header>
+<main>
+
+  <h2>Start the working model</h2>
+  <div class="grid">
+    <a class="card" href="../START_WEB_DASHBOARD.bat">
+      <div class="title">▶ Open the web dashboard</div>
+      <div class="desc">Double-click this file, then open <code>http://localhost:8501</code>.
+      Live Webcam is selected by default.</div>
+      <div class="path">START_WEB_DASHBOARD.bat</div>
+    </a>
+    <a class="card" href="../START_LIVE_CAMERA.bat">
+      <div class="title">📷 Open the live camera window</div>
+      <div class="desc">Runs the overlay directly on your webcam. Press q / Esc to quit.</div>
+      <div class="path">START_LIVE_CAMERA.bat</div>
+    </a>
+    <a class="card" href="../START_DEMO.bat">
+      <div class="title">🎬 Run the automated demo</div>
+      <div class="desc">No camera needed — processes six scenarios and regenerates the report.</div>
+      <div class="path">START_DEMO.bat</div>
+    </a>
+  </div>
+
+  <h2>Demo session outputs</h2>
+  <div class="grid">
+    <a class="card" href="demo_report.html">
+      <div class="title">📄 Session report (HTML)</div>
+      <div class="desc">Full report: PERCLOS, Fatigue Risk Index, risk timeline, gaze distribution,
+        alert events and evidence snapshots. Opens in your browser.</div>
+      <div class="path">docs/demo_report.html</div>
+    </a>
+    <a class="card" href="report_preview.png">
+      <div class="title">🖼 Report preview (image)</div>
+      <div class="desc">A rendered screenshot of the full report — quickest way to view it.</div>
+      <div class="path">docs/report_preview.png</div>
+    </a>
+    <a class="card" href="screenshots/all_states_contact_sheet.jpg">
+      <div class="title">🖼 All 6 states contact sheet</div>
+      <div class="desc">Normal, drowsiness, yawning, head turn, phone use and eye-only gaze tracking.</div>
+      <div class="path">docs/screenshots/all_states_contact_sheet.jpg</div>
+    </a>
+    <a class="card" href="../demo_output_annotated.mp4">
+      <div class="title">🎥 Annotated demo video</div>
+      <div class="desc">540-frame processed video with the full HUD and all alerts.</div>
+      <div class="path">demo_output_annotated.mp4</div>
+    </a>
+    <a class="card" href="screenshots/">
+      <div class="title">📁 Verification screenshots</div>
+      <div class="desc">Figures 4–10 from the IEEE paper implementation.</div>
+      <div class="path">docs/screenshots/</div>
+    </a>
+    <a class="card" href="snapshots/">
+      <div class="title">📁 Alert evidence snapshots</div>
+      <div class="desc">One image saved each time an alert starts.</div>
+      <div class="path">docs/snapshots/</div>
+    </a>
+    <a class="card" href="session_demo.csv">
+      <div class="title">📊 Per-frame telemetry CSV</div>
+      <div class="desc">EAR, MOR, yaw, pitch, gaze, PERCLOS, FRI for every frame. Opens in Excel.</div>
+      <div class="path">docs/session_demo.csv</div>
+    </a>
+    <a class="card" href="session_demo_summary.json">
+      <div class="title">🧾 Session summary JSON</div>
+      <div class="desc">Aggregated statistics and the alert-event list.</div>
+      <div class="path">docs/session_demo_summary.json</div>
+    </a>
+  </div>
+
+  <h2>Live webcam outputs <span class="tag">LOCAL ONLY</span></h2>
+  <div class="note">
+    Your personal live-camera recordings are kept <strong>only on this PC</strong>
+    (<code>docs/live/</code> is excluded from GitHub for privacy).
+    These links work locally; they are not published.
+  </div>
+  <div class="grid">
+    <a class="card" href="live/live_report.html">
+      <div class="title">📄 Live session report</div>
+      <div class="desc">Report from the recorded live webcam session.</div>
+      <div class="path">docs/live/live_report.html</div>
+    </a>
+    <a class="card" href="live/live_contact_sheet.jpg">
+      <div class="title">🖼 Live output frames</div>
+      <div class="desc">Drowsiness alert, head turn and attentive frames.</div>
+      <div class="path">docs/live/live_contact_sheet.jpg</div>
+    </a>
+    <a class="card" href="live/live_preview.gif">
+      <div class="title">🎞 Animated live preview</div>
+      <div class="desc">Short GIF of the annotated live webcam session.</div>
+      <div class="path">docs/live/live_preview.gif</div>
+    </a>
+    <a class="card" href="live/live_now.mp4">
+      <div class="title">🎥 Live session video</div>
+      <div class="desc">Latest annotated live webcam recording.</div>
+      <div class="path">docs/live/live_now.mp4</div>
+    </a>
+  </div>
+
+  <h2>GitHub</h2>
+  <div class="grid">
+    <a class="card" href="https://github.com/sanjeithaks/distracted-driving-through-eye-tracking-and-fatigue-monitoring-">
+      <div class="title">🌐 Open the GitHub repository</div>
+      <div class="desc">Source code, README, models, tests, screenshots and the generated demo report.</div>
+      <div class="path">github.com/sanjeithaks/distracted-driving-through-eye-tracking-and-fatigue-monitoring-</div>
+    </a>
+    <a class="card" href="https://raw.githack.com/sanjeithaks/distracted-driving-through-eye-tracking-and-fatigue-monitoring-/main/docs/demo_report.html">
+      <div class="title">📄 View the report online</div>
+      <div class="desc">Renders the HTML report directly from GitHub.</div>
+      <div class="path">raw.githack.com → docs/demo_report.html</div>
+    </a>
+  </div>
+
+  <footer>
+    Project folder: <code>C:\Users\USER\OneDrive\driver_project</code><br>
+    Generated by the Driver Fatigue &amp; Distraction Monitoring System.
+  </footer>
+</main>
+</body>
+</html>
