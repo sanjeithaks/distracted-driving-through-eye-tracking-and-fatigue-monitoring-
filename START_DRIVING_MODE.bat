@@ -1,6 +1,6 @@
 @echo off
 setlocal
-title Driving Mode - Driver Monitoring
+title Driving Mode Launcher
 cd /d "%~dp0"
 set PYTHONUTF8=1
 
@@ -30,9 +30,9 @@ echo   F - toggle full-screen
 echo   Q / Esc - quit
 echo.
 echo Starting the driving cockpit... look straight ahead for 2 seconds
-echo so your neutral head pose calibrates.
+echo so your neutral head pose calibrates. Press F for full-screen.
 echo.
-%PY% driving_mode.py
+%PY% driving_mode.py --windowed --width 1024 --height 576
 echo.
 echo Driving mode closed.
 pause

@@ -97,9 +97,13 @@ def main():
     win = "Driving Mode - Driver Monitoring"
     fullscreen = not args.windowed
     if not args.headless:
-        cv2.namedWindow(win, cv2.WINDOW_NORMAL)
         if fullscreen:
+            cv2.namedWindow(win, cv2.WINDOW_NORMAL)
             cv2.setWindowProperty(win, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+        else:
+            # AUTOSIZE shows the cockpit 1:1 (no DPI scaling crop)
+            cv2.namedWindow(win, cv2.WINDOW_AUTOSIZE)
+            cv2.moveWindow(win, 80, 50)
 
     steer_input, throttle = 0.0, 0.0
     prev = time.time()
@@ -138,6 +142,9 @@ def main():
                         win, cv2.WND_PROP_FULLSCREEN,
                         cv2.WINDOW_FULLSCREEN if fullscreen else cv2.WINDOW_NORMAL
                     )
+                    if not fullscreen:
+                        cv2.resizeWindow(win, args.width, args.height)
+                        cv2.moveWindow(win, 80, 50)
 
                 steer_input = 0.0
                 throttle = 0.0
@@ -155,6 +162,9 @@ def main():
 
             if writer is not None:
                 writer.write(scene)
+            if (not args.headless) and frame_idx == 10:
+                os.makedirs("docs", exist_ok=True)
+                cv2.imwrite(os.path.join("docs", "driving_live_frame.jpg"), scene)
             logger.log_frame(telemetry, frame_idx, frame=scene)
 
             if not args.headless:
