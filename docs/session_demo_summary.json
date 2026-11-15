@@ -1,7 +1,7 @@
 {
   "session": "demo",
-  "started_at": "2026-11-15T15:28:12",
-  "duration_sec": 11.59,
+  "started_at": "2026-11-15T16:10:29",
+  "duration_sec": 12.34,
   "frames": 540,
   "face_detection_rate_pct": 100.0,
   "avg_ear": 0.3109,
@@ -9,7 +9,7 @@
   "max_ear": 0.4073,
   "avg_mor": 0.1594,
   "max_mor": 0.5492,
-  "avg_fps": 47.91,
+  "avg_fps": 44.07,
   "avg_perclos": 25.5,
   "max_perclos": 54.97,
   "avg_fatigue_risk": 52.2,
@@ -481,7 +481,7 @@
   ],
   "events": [
     {
-      "timestamp": 1.99,
+      "timestamp": 2.22,
       "frame": 97,
       "type": "DROWSY",
       "message": "Drowsiness detected - prolonged eye closure",
@@ -490,7 +490,7 @@
       "snapshot": "snapshot_000097_drowsy.jpg"
     },
     {
-      "timestamp": 5.05,
+      "timestamp": 5.29,
       "frame": 230,
       "type": "YAWNING",
       "message": "Yawning detected - driver fatigue warning",
@@ -499,7 +499,7 @@
       "snapshot": "snapshot_000230_yawning.jpg"
     },
     {
-      "timestamp": 6.29,
+      "timestamp": 6.64,
       "frame": 292,
       "type": "DISTRACTED",
       "message": "Driver distracted - looking away from the road",
@@ -508,7 +508,7 @@
       "snapshot": "snapshot_000292_distracted.jpg"
     },
     {
-      "timestamp": 7.68,
+      "timestamp": 8.13,
       "frame": 362,
       "type": "DISTRACTED",
       "message": "Driver distracted - looking away from the road",
@@ -517,7 +517,7 @@
       "snapshot": "snapshot_000362_distracted.jpg"
     },
     {
-      "timestamp": 9.67,
+      "timestamp": 9.96,
       "frame": 441,
       "type": "DISTRACTED",
       "message": "Driver distracted - looking away from the road",
@@ -526,7 +526,7 @@
       "snapshot": "snapshot_000441_distracted.jpg"
     },
     {
-      "timestamp": 10.79,
+      "timestamp": 11.18,
       "frame": 498,
       "type": "DISTRACTED",
       "message": "Driver distracted - looking away from the road",
