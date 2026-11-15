@@ -41,6 +41,18 @@ class Visualizer:
         cv2.putText(frame, text, (x, y), cv2.FONT_HERSHEY_DUPLEX, font_scale, (0, 0, 0), outline_thickness, cv2.LINE_AA)
         cv2.putText(frame, text, (x, y), cv2.FONT_HERSHEY_DUPLEX, font_scale, color, thickness, cv2.LINE_AA)
 
+    @staticmethod
+    def _draw_dashed_rect(frame, p1, p2, color, thickness=2, dash=14):
+        """Draw a dashed rectangle (camera framing guide)."""
+        x1, y1 = p1
+        x2, y2 = p2
+        for x in range(x1, x2, dash * 2):
+            cv2.line(frame, (x, y1), (min(x + dash, x2), y1), color, thickness)
+            cv2.line(frame, (x, y2), (min(x + dash, x2), y2), color, thickness)
+        for y in range(y1, y2, dash * 2):
+            cv2.line(frame, (x1, y), (x1, min(y + dash, y2)), color, thickness)
+            cv2.line(frame, (x2, y), (x2, min(y + dash, y2)), color, thickness)
+
     def render(self, frame, detection, ear, mor, is_drowsy, is_yawning, is_distracted,
                distraction_reason, yaw, pitch, roll, axis_pts, blinks, yawns, distractions,
                fps, serial_connected, gaze_label="N/A", gaze_x=0.5, gaze_y=0.5,
@@ -125,8 +137,8 @@ class Visualizer:
             # Live-camera framing hint: warn when the face is cut off at the
             # bottom of the frame (common when a laptop camera is too low).
             if y + bh > h - 105:
-                self.draw_text_with_outline(output, "CENTER FACE IN FRAME", (w - 300, 30),
-                                            font_scale=0.55, color=(0, 165, 255),
+                self.draw_text_with_outline(output, "MOVE BACK - MOUTH MUST BE VISIBLE", (w - 380, 30),
+                                            font_scale=0.50, color=(0, 165, 255),
                                             thickness=2, outline_thickness=4)
             elif bw < w * 0.12:
                 self.draw_text_with_outline(output, "MOVE CLOSER TO CAMERA", (w - 300, 30),
@@ -134,9 +146,17 @@ class Visualizer:
                                             thickness=2, outline_thickness=4)
 
         else:
-            # No face detected
+            # No face detected - show a framing box so the user can position
+            # their whole face (including the mouth, needed for yawn detection).
+            gx1, gy1 = int(w * 0.22), 95
+            gx2, gy2 = int(w * 0.78), h - 150
+            self._draw_dashed_rect(output, (gx1, gy1), (gx2, gy2), (0, 165, 255), 2)
             self.draw_text_with_outline(output, "NO FACE DETECTED", (30, 50),
                                         font_scale=1.0, color=(0, 165, 255), thickness=2, outline_thickness=5)
+            self.draw_text_with_outline(output, "PLACE WHOLE FACE IN BOX", (gx1 + 10, gy1 - 12),
+                                        font_scale=0.55, color=(0, 165, 255), thickness=2, outline_thickness=4)
+            self.draw_text_with_outline(output, "INCLUDE YOUR MOUTH", (gx1 + 10, gy2 + 28),
+                                        font_scale=0.52, color=(0, 165, 255), thickness=1, outline_thickness=3)
 
         # 2. Telemetry HUD Bar at Bottom
         if self.show_hud:

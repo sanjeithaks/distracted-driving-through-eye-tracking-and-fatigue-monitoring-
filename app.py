@@ -64,6 +64,30 @@ def _sparkline_svg(history, width=640, height=130):
     </div>"""
 
 
+def _draw_framing_box(frame):
+    """Draw the camera positioning guide on a preview still."""
+    out = frame.copy()
+    h, w = out.shape[:2]
+    x1, y1, x2, y2 = int(w * 0.22), 95, int(w * 0.78), h - 150
+    color = (0, 165, 255)
+    dash = 14
+    for x in range(x1, x2, dash * 2):
+        cv2.line(out, (x, y1), (min(x + dash, x2), y1), color, 2)
+        cv2.line(out, (x, y2), (min(x + dash, x2), y2), color, 2)
+    for y in range(y1, y2, dash * 2):
+        cv2.line(out, (x1, y), (x1, min(y + dash, y2)), color, 2)
+        cv2.line(out, (x2, y), (x2, min(y + dash, y2)), color, 2)
+    cv2.putText(out, "PLACE WHOLE FACE IN BOX", (x1 + 10, y1 - 12),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.55, (0, 0, 0), 4, cv2.LINE_AA)
+    cv2.putText(out, "PLACE WHOLE FACE IN BOX", (x1 + 10, y1 - 12),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.55, color, 2, cv2.LINE_AA)
+    cv2.putText(out, "INCLUDE YOUR MOUTH", (x1 + 10, y2 + 28),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.52, (0, 0, 0), 3, cv2.LINE_AA)
+    cv2.putText(out, "INCLUDE YOUR MOUTH", (x1 + 10, y2 + 28),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.52, color, 1, cv2.LINE_AA)
+    return out
+
+
 def _events_markdown(events):
     """Render alert events as a plain Markdown table (no pandas needed)."""
     if not events:
@@ -129,18 +153,37 @@ def main():
     st.sidebar.subheader("🎥 Video Input")
     input_mode = st.sidebar.radio(
         "Input mode",
-        options=["Run Built-in Demo Clip", "Upload Driving Video File", "Live Webcam Stream"]
+        options=["Run Built-in Demo Clip", "Upload Driving Video File", "Live Webcam Stream"],
+        index=2,
+        help="Live Webcam monitors your actual camera in real time."
     )
 
     uploaded_file = None
     if input_mode == "Upload Driving Video File":
         uploaded_file = st.sidebar.file_uploader("Upload MP4 / AVI / MOV video", type=["mp4", "avi", "mov"])
 
-    webcam_seconds = 20
+    webcam_seconds = 120
     if input_mode == "Live Webcam Stream":
         webcam_seconds = st.sidebar.slider(
-            "Webcam capture duration (seconds)", min_value=5, max_value=120, value=20, step=5
+            "Live monitoring duration (seconds)", min_value=30, max_value=600,
+            value=120, step=30
         )
+        st.sidebar.info(
+            "**Live monitoring**\n\n"
+            "Keep your **whole face including your mouth** visible in the "
+            "camera. Try closing your eyes, yawning, or turning your head."
+        )
+        if st.sidebar.button("📷 Test camera framing", width="stretch"):
+            test_cap = cv2.VideoCapture(0)
+            frame_ok = False
+            for _ in range(12):          # allow auto-exposure to settle
+                frame_ok, preview_frame = test_cap.read()
+            test_cap.release()
+            if frame_ok and preview_frame is not None:
+                st.session_state["camera_preview"] = preview_frame
+            else:
+                st.sidebar.error("Could not open the webcam. Close other camera apps and retry.")
+    else:
         st.sidebar.caption("The dashboard shows highlights while the clip is processed.")
 
     # ------------------------------------------------------------------ #
@@ -189,7 +232,14 @@ def main():
     with col_video:
         st.subheader("📹 Video Stream & Facial Feature Tracking")
         video_placeholder = st.empty()
-        video_placeholder.info("Select an input mode in the sidebar and press Start Monitoring.")
+        preview = st.session_state.get("camera_preview")
+        if input_mode == "Live Webcam Stream" and preview is not None:
+            preview_rgb = cv2.cvtColor(_draw_framing_box(preview), cv2.COLOR_BGR2RGB)
+            video_placeholder.image(preview_rgb, channels="RGB", width="stretch")
+            st.caption("Move back until your whole face — **including your mouth** — "
+                       "is inside the dashed box, then press Start Monitoring.")
+        else:
+            video_placeholder.info("Choose an input mode and press Start Monitoring.")
         start_btn = st.button("🚀 Start Monitoring", key="start_monitoring", type="primary")
 
     if not start_btn:
@@ -236,7 +286,14 @@ def main():
 
     cap = cv2.VideoCapture(source)
     if not cap.isOpened():
-        st.error(f"Could not open video source: {source}")
+        if source == 0:
+            st.error(
+                "Could not open the webcam. Close other apps using the camera "
+                "(Teams/Zoom/Camera), then allow camera access in "
+                "Windows Settings → Privacy & security → Camera."
+            )
+        else:
+            st.error(f"Could not open video source: {source}")
         engine.close()
         logger.close()
         return
@@ -351,6 +408,9 @@ def main():
     summary = logger.close()
 
     st.success(f"Monitoring session completed — {summary['frames']} frames processed.")
+    if input_mode == "Live Webcam Stream":
+        st.info("Live monitoring stopped after the selected duration. "
+                "Press **Start Monitoring** again to continue watching the camera.")
     st.subheader("🧾 Session Summary")
     s1, s2, s3, s4 = st.columns(4)
     s1.metric("Frames", summary['frames'])

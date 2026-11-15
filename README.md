@@ -48,8 +48,10 @@ python main.py                        # q / Esc to quit
 python demo.py
 ```
 
-> If your Windows camera is low, raise it so your **whole face sits in the upper-middle**
-> of the frame. The live HUD shows `CENTER FACE IN FRAME` when the face is cut off.
+> **For live webcam monitoring:** move back until your **whole face, including your
+> mouth**, sits inside the dashed orange box. Yawning needs the mouth visible, eye
+> closure needs the eyes visible, and head turns need the full face. Use the
+> **📷 Test camera framing** button in the dashboard sidebar before pressing Start.
 
 ---
 

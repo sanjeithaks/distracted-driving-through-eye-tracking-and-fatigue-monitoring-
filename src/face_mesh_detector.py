@@ -58,6 +58,18 @@ ONNX_LANDMARKER_URL = ("https://github.com/yakhyo/mediapipe-face-mesh-onnx/relea
                        "download/weights/face_landmarker_Nx3x256x256.onnx")
 
 
+def _enhance_low_light(frame_bgr):
+    """CLAHE contrast enhancement used only when detection fails (dim rooms)."""
+    try:
+        lab = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2LAB)
+        l_chan, a_chan, b_chan = cv2.split(lab)
+        clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
+        enhanced = cv2.merge([clahe.apply(l_chan), a_chan, b_chan])
+        return cv2.cvtColor(enhanced, cv2.COLOR_LAB2BGR)
+    except Exception:
+        return frame_bgr
+
+
 def package_landmarks(pts_2d, width, height):
     """Convert 478 mesh points into the pipeline's feature dictionary."""
     bbox_min_x = max(0, min(p[0] for p in pts_2d))
@@ -328,4 +340,12 @@ class FaceMeshDetector:
             setattr(self, name, globals()[name])
 
     def process(self, frame_bgr):
-        return self._impl.process(frame_bgr)
+        result = self._impl.process(frame_bgr)
+        if not result.get('detected', False):
+            # Retry once with CLAHE contrast enhancement for dim environments.
+            enhanced = _enhance_low_light(frame_bgr)
+            retry = self._impl.process(enhanced)
+            if retry.get('detected', False):
+                retry['low_light_enhanced'] = True
+                return retry
+        return result
