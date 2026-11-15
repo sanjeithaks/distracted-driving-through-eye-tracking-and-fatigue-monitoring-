@@ -59,9 +59,14 @@ def parse_args():
         help="Disable audio sound alarm"
     )
     parser.add_argument(
+        "--serial",
+        action="store_true",
+        help="Enable physical Arduino/Raspberry Pi serial output (default: PC simulation)"
+    )
+    parser.add_argument(
         "--no-serial",
         action="store_true",
-        help="Disable embedded microcontroller serial communication"
+        help="Force PC simulation mode (no hardware)"
     )
     parser.add_argument(
         "--port",
@@ -128,7 +133,8 @@ def main():
     print(f" EAR Threshold:    {args.ear_thresh}")
     print(f" MOR Threshold:    {args.mor_thresh}")
     print(f" Audio Warning:    {'OFF' if args.no_audio else 'ON'}")
-    print(f" Embedded Serial:  {'OFF' if args.no_serial else f'ON (Port: {args.port})'}")
+    serial_enabled = bool(args.serial and not args.no_serial)
+    print(f" Embedded Output:  {'HARDWARE (Port: ' + args.port + ')' if serial_enabled else 'PC SIMULATION (no hardware)'}")
     print(f" Headless Mode:    {'YES' if args.headless else 'NO'}")
     print(f" Session Logging:  {'OFF' if args.no_log else f'ON ({args.log_dir})'}")
     print("=" * 70)
@@ -137,7 +143,7 @@ def main():
     engine = DriverMonitoringEngine(
         ear_thresh=args.ear_thresh,
         mor_thresh=args.mor_thresh,
-        enable_serial=not args.no_serial,
+        enable_serial=serial_enabled,
         enable_audio=not args.no_audio,
         serial_port=args.port
     )

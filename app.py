@@ -12,7 +12,6 @@ import tempfile
 import time
 
 import cv2
-import pandas as pd
 import streamlit as st
 
 # Configure page
@@ -25,7 +24,6 @@ st.set_page_config(
 # Set matplotlib cache dir
 os.environ.setdefault("MPLCONFIGDIR", os.path.join(os.path.expanduser("~"), ".matplotlib_cache"))
 
-from src.detector_engine import DriverMonitoringEngine
 from src.session_logger import SessionLogger
 from src.report import generate_html_report
 from src.config import (
@@ -35,6 +33,53 @@ from src.config import (
 )
 
 LOGS_DIR = "logs"
+
+
+def _sparkline_svg(history, width=640, height=130):
+    """Lightweight SVG chart (avoids pandas/pyarrow entirely)."""
+    if len(history) < 2:
+        return "<div style='color:#64748b;font-size:13px'>Waiting for data…</div>"
+
+    def polyline(key, color):
+        pts = []
+        n = len(history)
+        for i, row in enumerate(history):
+            x = 10 + (i / max(1, n - 1)) * (width - 20)
+            y = (height - 12) - max(0.0, min(1.0, row[key])) * (height - 24)
+            pts.append(f"{x:.1f},{y:.1f}")
+        return (f'<polyline points="{" ".join(pts)}" fill="none" '
+                f'stroke="{color}" stroke-width="2" stroke-linejoin="round"/>')
+
+    return f"""
+    <div style="background:#111c30;border:1px solid #1e293b;border-radius:10px;padding:10px">
+      <div style="font-size:12px;color:#94a3b8;margin-bottom:4px">
+        <span style="color:#22c55e">● EAR</span>&nbsp;&nbsp;
+        <span style="color:#a855f7">● MOR</span>
+      </div>
+      <svg viewBox="0 0 {width} {height}" width="100%" height="auto">
+        <line x1="10" y1="{height-12}" x2="{width-10}" y2="{height-12}" stroke="#334155"/>
+        {polyline('EAR', '#22c55e')}
+        {polyline('MOR', '#a855f7')}
+      </svg>
+    </div>"""
+
+
+def _events_markdown(events):
+    """Render alert events as a plain Markdown table (no pandas needed)."""
+    if not events:
+        return "_No alert events recorded._"
+    lines = [
+        "| Time (s) | Frame | Type | Message | Reason | FRI | Snapshot |",
+        "|---|---|---|---|---|---|---|",
+    ]
+    for e in events:
+        cells = [
+            e.get('timestamp', ''), e.get('frame', ''), e.get('type', ''),
+            e.get('message', ''), e.get('reason', ''),
+            e.get('fatigue_risk', ''), e.get('snapshot', ''),
+        ]
+        lines.append("| " + " | ".join(str(c).replace('|', '\\|') for c in cells) + " |")
+    return "\n".join(lines)
 
 
 def main():
@@ -65,9 +110,20 @@ def main():
     )
 
     st.sidebar.markdown("---")
-    st.sidebar.subheader("🔌 Embedded System Interface")
-    enable_serial = st.sidebar.checkbox("Enable Serial Hardware Bridge", value=False)
-    serial_port = st.sidebar.text_input("COM Port", value=SERIAL_PORT)
+    st.sidebar.subheader("🔌 Embedded Output")
+    output_mode = st.sidebar.radio(
+        "Output mode",
+        options=["PC simulation (no hardware)", "Arduino via serial"],
+        index=0,
+        help="Simulation shows the virtual vibration motor, buzzer and LEDs on screen."
+    )
+    enable_serial = output_mode.startswith("Arduino")
+    serial_port = SERIAL_PORT
+    if enable_serial:
+        serial_port = st.sidebar.text_input("COM Port", value=SERIAL_PORT)
+        st.sidebar.caption("Connect an Arduino to enable physical output.")
+    else:
+        st.sidebar.caption("No hardware needed — all actuators are simulated on screen.")
 
     st.sidebar.markdown("---")
     st.sidebar.subheader("🎥 Video Input")
@@ -118,6 +174,15 @@ def main():
         status_box = st.empty()
         status_box.success("STATUS: SYSTEM READY")
 
+        with st.container(border=True):
+            st.markdown("**Simulated embedded output**")
+            st.caption("PC simulation — no Arduino or Raspberry Pi required")
+            e1, e2, e3 = st.columns(3)
+            metric_actuator = e1.metric("Actuator state", "NORMAL")
+            metric_motor = e2.metric("Seatbelt motor", "Idle")
+            metric_buzzer = e3.metric("Buzzer", "OFF")
+            led_line = st.caption("LEDs: 🟢 green (normal)")
+
         st.subheader("📈 Real-time Trend")
         chart_holder = st.empty()
 
@@ -154,14 +219,17 @@ def main():
     else:
         source = 0  # Default webcam
 
-    engine = DriverMonitoringEngine(
-        ear_thresh=ear_thresh,
-        ear_consec_frames=ear_consec,
-        mor_thresh=mor_thresh,
-        enable_serial=enable_serial,
-        enable_audio=False,
-        serial_port=serial_port
-    )
+    engine = None
+    with st.spinner("Loading eye-tracking and fatigue models..."):
+        from src.detector_engine import DriverMonitoringEngine
+        engine = DriverMonitoringEngine(
+            ear_thresh=ear_thresh,
+            ear_consec_frames=ear_consec,
+            mor_thresh=mor_thresh,
+            enable_serial=enable_serial,
+            enable_audio=False,
+            serial_port=serial_port
+        )
     st.caption(f"Face landmark backend: `{engine.detector.backend}`")
     logger = SessionLogger(output_dir=LOGS_DIR, session_name="dashboard",
                            snapshot_dir=os.path.join(LOGS_DIR, "snapshots"))
@@ -200,7 +268,7 @@ def main():
             if now - last_display > 1.0 / 15.0:
                 last_display = now
                 frame_rgb = cv2.cvtColor(annotated_frame, cv2.COLOR_BGR2RGB)
-                video_placeholder.image(frame_rgb, channels="RGB", use_container_width=True)
+                video_placeholder.image(frame_rgb, channels="RGB", width="stretch")
 
                 metric_ear.metric("EAR", f"{telemetry['ear']:.2f}")
                 metric_mor.metric("MOR", f"{telemetry['mor']:.2f}")
@@ -220,6 +288,26 @@ def main():
                     f"yawn rate {telemetry['yawn_rate']:.1f}/min"
                 )
 
+                # Virtual embedded actuators (PC simulation mode)
+                risk = telemetry['fatigue_risk']
+                vibration_hz = 100 + 2 * int(round(risk))
+                if telemetry['is_drowsy']:
+                    act_state, buzzer, led = "DROWSY", "ON", "🔴 red"
+                    motor = f"{vibration_hz} Hz"
+                elif telemetry['is_distracted']:
+                    act_state, buzzer, led = "DISTRACTION", "PULSE", "🔵 blue"
+                    motor = f"{vibration_hz} Hz"
+                elif telemetry['is_yawning']:
+                    act_state, buzzer, led = "YAWNING", "CHIME", "🟡 yellow"
+                    motor = "Idle"
+                else:
+                    act_state, buzzer, led = "NORMAL", "OFF", "🟢 green"
+                    motor = "Idle"
+                metric_actuator.metric("Actuator state", act_state)
+                metric_motor.metric("Seatbelt motor", motor)
+                metric_buzzer.metric("Buzzer", buzzer)
+                led_line.caption(f"LEDs: {led} • simulated output")
+
                 if telemetry['is_drowsy']:
                     status_box.error("🚨 DROWSINESS ALERT! Seatbelt vibration + buzzer triggered")
                 elif telemetry['is_distracted']:
@@ -237,7 +325,7 @@ def main():
             if len(history) > 150:
                 history.pop(0)
             if frame_num % 5 == 0 and history:
-                chart_holder.line_chart(pd.DataFrame(history).set_index('Frame')[['EAR', 'MOR']])
+                chart_holder.html(_sparkline_svg(history))
 
             if progress is not None and total_frames > 0 and frame_num % 10 == 0:
                 progress.progress(min(1.0, frame_num / total_frames))
@@ -277,7 +365,7 @@ def main():
     q4.metric("Final Risk Level", summary['final_risk_level'])
 
     if summary['events']:
-        st.dataframe(pd.DataFrame(summary['events']), use_container_width=True)
+        st.markdown(_events_markdown(summary['events']))
 
     download_col1, download_col2 = st.columns(2)
     if logger.csv_path and os.path.exists(logger.csv_path):

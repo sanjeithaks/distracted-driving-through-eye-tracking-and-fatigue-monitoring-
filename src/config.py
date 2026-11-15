@@ -81,7 +81,7 @@ ALERT_SNAPSHOT_DIR = "snapshots"     # relative to the session log directory
 SERIAL_PORT = "COM3"           # Default port (auto-detect fallback available)
 SERIAL_BAUD_RATE = 9600
 SERIAL_TIMEOUT = 0.1
-ENABLE_EMBEDDED_SERIAL = True  # Set False if running pure software mode
+ENABLE_EMBEDDED_SERIAL = False  # PC simulation by default; enable with --serial
 
 # Embedded Vibration Frequencies (as specified in IEEE paper: 100 Hz to 300 Hz)
 SEATBELT_VIBRATION_FREQ_HZ = 200

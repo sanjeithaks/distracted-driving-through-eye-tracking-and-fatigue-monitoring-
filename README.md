@@ -27,6 +27,12 @@ An end-to-end computer vision and embedded safety system designed to prevent veh
 choose *Run Built-in Demo Clip* / *Upload Driving Video File* / *Live Webcam Stream* in
 the sidebar → press **🚀 Start Monitoring**. Keep the terminal window open while using it.
 
+> **No Arduino or Raspberry Pi? No problem.** Everything runs in **PC simulation mode by
+> default**. The dashboard shows a virtual seatbelt motor, buzzer and LEDs, and the HUD
+> shows `HW: SIM`. Hardware is optional and only used if you explicitly enable it.
+
+![Dashboard running in PC simulation mode](docs/dashboard_simulation.png)
+
 ### Manual commands (any OS)
 
 ```bash
@@ -328,7 +334,12 @@ Open your browser at `http://localhost:8501`.
 
 ---
 
-## Embedded Hardware Connections
+## Embedded Hardware Connections (Optional)
+
+> **The project works fully without hardware.** By default the embedded subsystem runs
+> in **PC simulation**: the seatbelt vibration frequency, buzzer and LEDs are displayed
+> on screen in the Streamlit dashboard and the HUD shows `HW: SIM`. The wiring below is
+> only needed if you want a physical demonstration.
 
 ### Arduino Wiring Diagram
 | Component | Arduino Pin | Description |
@@ -342,10 +353,11 @@ Open your browser at `http://localhost:8501`.
 | USB / Serial | **USB COM** | 9600 Baud serial communication |
 
 1. Flash `embedded/driver_fatigue_arduino.ino` to your Arduino using Arduino IDE.
-2. Run `main.py` with serial enabled:
+2. Run `main.py` with hardware output explicitly enabled:
    ```bash
-   python main.py --port COM3
+   python main.py --serial --port COM3
    ```
+   Without `--serial`, the system uses PC simulation and never requires a COM port.
 
 ### Raspberry Pi Deployment
 For embedded onboard deployment on a Raspberry Pi:

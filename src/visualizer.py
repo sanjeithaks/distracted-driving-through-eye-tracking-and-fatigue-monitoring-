@@ -191,8 +191,8 @@ class Visualizer:
 
         # FPS & Hardware connection status
         cv2.putText(frame, f"FPS: {fps:.1f}", (w - 160, r2_y), font, 0.48, (0, 255, 255), 1, cv2.LINE_AA)
-        hw_text = "HW: On" if serial_connected else "HW: Off"
-        hw_color = (0, 255, 0) if serial_connected else (130, 130, 130)
+        hw_text = "HW: On" if serial_connected else "HW: SIM"
+        hw_color = (0, 255, 0) if serial_connected else (0, 200, 255)
         cv2.putText(frame, hw_text, (w - 68, r2_y), font, 0.42, hw_color, 1, cv2.LINE_AA)
 
         # Row 3: PERCLOS & explainable Fatigue Risk Index
